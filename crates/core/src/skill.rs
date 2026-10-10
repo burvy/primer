@@ -47,13 +47,16 @@ pub enum Regroup {
 /// chapter heading the child sees. `op` is which kind of sum this chapter
 /// teaches. `min_a`, `max_a`, `min_b`, `max_b` bound the two operands.
 /// `max_whole` is the biggest number in the sum (the total when adding, the
-/// starting number when subtracting) and `regroup` is the carry rule. Together
-/// they are the chapter's promise: [`Skill::allows`] checks it, and the
-/// generator only picks `a` and `b` that pass.
+/// starting number when subtracting) and `regroup` is the carry rule.
+/// `total` is `Some` only for number-bond chapters: every sum must add up to
+/// exactly that number. Together they are the chapter's promise:
+/// [`Skill::allows`] checks it, and the generator only picks `a` and `b`
+/// that pass.
 /// `missing_addend` says the box sits in the middle (`3 + box = 7`) instead
 /// of at the end (`3 + 4 = box`). `stages` lists how the chapter is shown, in
-/// order. `requires` lists earlier skill ids to master first. `track` is
-/// always `Track::Core` in version 1.
+/// order. `requires` lists earlier skill ids to master first. `words` lists
+/// the vocabulary ids this chapter teaches (see `content/words.toml`).
+/// `track` is always `Track::Core` in version 1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Skill {
     pub id: &'static str,
@@ -65,9 +68,11 @@ pub struct Skill {
     pub max_b: u32,
     pub max_whole: u32,
     pub regroup: Regroup,
+    pub total: Option<u32>,
     pub missing_addend: bool,
     pub stages: &'static [Stage],
     pub requires: &'static [&'static str],
+    pub words: &'static [&'static str],
     pub track: Track,
 }
 
@@ -92,8 +97,11 @@ impl Skill {
     /// Does `a op b` keep this chapter's promise?
     ///
     /// True when both numbers are in range, the biggest number stays under
-    /// `max_whole`, and the carry rule holds. Subtracting more than you have
-    /// is never allowed.
+    /// `max_whole`, the carry rule holds, and (for bond chapters) the sum is
+    /// exactly `total`. Subtracting more than you have is never allowed.
+    ///
+    /// `Option` here means "maybe a rule": `None` means no fixed total, so
+    /// that check passes; `Some(10)` means only sums to 10 pass.
     pub fn allows(&self, a: u32, b: u32) -> bool {
         let in_range = (self.min_a..=self.max_a).contains(&a)
             && (self.min_b..=self.max_b).contains(&b)
@@ -107,7 +115,10 @@ impl Skill {
             Regroup::Without => !crosses_ten,
             Regroup::With => crosses_ten,
         };
-        in_range && whole <= self.max_whole && regroup_ok
+        // `is_none_or(...)` says: no rule (`None`) passes; otherwise the
+        // closure must hold. `|t|` is the fixed total, checked against `whole`.
+        let total_ok = self.total.is_none_or(|t| whole == t);
+        in_range && whole <= self.max_whole && regroup_ok && total_ok
     }
 }
 
@@ -125,9 +136,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 2,
         max_whole: 5,
         regroup: Regroup::Either,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &[],
+        words: &["successor", "function"],
         track: Track::Core,
     },
     Skill {
@@ -140,9 +153,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 8,
         max_whole: 10,
         regroup: Regroup::Either,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["count-on-within-5"],
+        words: &["sum", "addend", "equation", "equals", "commutative", "doubles"],
         track: Track::Core,
     },
     Skill {
@@ -155,24 +170,28 @@ pub const SKILLS: &[Skill] = &[
         max_b: 5,
         max_whole: 10,
         regroup: Regroup::Either,
+        total: None,
         missing_addend: true,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
+        words: &["unknown", "fact-family"],
         track: Track::Core,
     },
     Skill {
         id: "make-ten",
         title: "Make ten",
         op: Op::Add,
-        min_a: 6,
+        min_a: 1,
         max_a: 9,
-        min_b: 2,
+        min_b: 1,
         max_b: 9,
-        max_whole: 18,
-        regroup: Regroup::With,
-        missing_addend: false,
+        max_whole: 10,
+        regroup: Regroup::Either,
+        total: Some(10),
+        missing_addend: true,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
+        words: &["number-bond", "compensation"],
         track: Track::Core,
     },
     Skill {
@@ -185,9 +204,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 9,
         max_whole: 10,
         regroup: Regroup::Either,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
+        words: &["difference", "predecessor", "inverse"],
         track: Track::Core,
     },
     Skill {
@@ -200,9 +221,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 8,
         max_whole: 20,
         regroup: Regroup::Without,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10", "make-ten"],
+        words: &["ones", "tens", "place-value"],
         track: Track::Core,
     },
     Skill {
@@ -215,9 +238,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 9,
         max_whole: 20,
         regroup: Regroup::Without,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-10"],
+        words: &["pattern"],
         track: Track::Core,
     },
     Skill {
@@ -230,9 +255,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 14,
         max_whole: 20,
         regroup: Regroup::With,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["make-ten", "add-within-20-no-carry"],
+        words: &["bridge-through-ten", "near-doubles"],
         track: Track::Core,
     },
     Skill {
@@ -245,9 +272,11 @@ pub const SKILLS: &[Skill] = &[
         max_b: 9,
         max_whole: 20,
         regroup: Regroup::With,
+        total: None,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-20-no-borrow", "make-ten"],
+        words: &["bridge-back-through-ten"],
         track: Track::Core,
     },
 ];
@@ -327,5 +356,77 @@ mod tests {
         }
         assert_eq!(Skill::find("no-such-skill"), None);
         assert_eq!(Skill::position("no-such-skill"), None);
+    }
+
+    #[test]
+    fn make_ten_means_bonds_to_ten_with_box_second() {
+        use crate::generate::generate;
+        use crate::look::Look;
+        use crate::problem::Blank;
+        use rand::SeedableRng;
+        use rand::rngs::StdRng;
+        let skill = Skill::find("make-ten").unwrap();
+        // The chapter's own rule says bonds: `Some(10)` with a missing addend.
+        assert_eq!(skill.total, Some(10));
+        assert!(skill.missing_addend);
+        // Every allowed sum adds to exactly 10, and only chapters 8-9 cross
+        // ten when adding (checked in the next test), so these are the pairs
+        // 1+9, 2+8, ... 9+1.
+        for a in 1..=9 {
+            for b in 1..=9 {
+                assert_eq!(skill.allows(a, b), a + b == 10);
+            }
+        }
+        // Gentle always hides the second number (`a + box = 10`).
+        let mut rng = StdRng::seed_from_u64(3);
+        for _ in 0..200 {
+            let problem = generate(skill, Look::Gentle, &mut rng);
+            assert_eq!(problem.a() + problem.b(), 10);
+            assert_eq!(problem.blank(), Blank::Second);
+            assert_eq!(problem.to_string(), format!("{} + □ = 10", problem.a()));
+        }
+    }
+
+    #[test]
+    fn only_chapters_8_and_9_cross_ten() {
+        // "Crossing ten" means the chapter's rule *requires* a carry (adding)
+        // or a borrow (subtracting): `Regroup::With`. Only chapters 8 (add
+        // with carrying) and 9 (subtract with borrowing) ask for that. Sums
+        // that merely land on exactly 10 (chapters 2 and 4) are making ten,
+        // not crossing it, so they do not count.
+        for skill in SKILLS {
+            let late = skill.id == "add-within-20-carry"
+                || skill.id == "subtract-within-20-borrow";
+            assert_eq!(
+                skill.regroup == Regroup::With,
+                late,
+                "{}: only chapters 8-9 may require crossing ten",
+                skill.id
+            );
+        }
+        // Spot-check the real thing: 8 + 5 carries, 13 - 5 borrows.
+        let carry = Skill::find("add-within-20-carry").unwrap();
+        assert!(carry.allows(8, 5));
+        let borrow = Skill::find("subtract-within-20-borrow").unwrap();
+        assert!(borrow.allows(13, 5));
+    }
+
+    #[test]
+    fn word_ids_are_unique_and_taught_once() {
+        use std::collections::{HashMap, HashSet};
+        // Every id appears in exactly one chapter, so each word is taught
+        // once. `HashMap` maps each id to the chapter that teaches it.
+        let mut taught_in: HashMap<&str, &str> = HashMap::new();
+        for skill in SKILLS {
+            let mut seen_here = HashSet::new();
+            for word in skill.words {
+                assert!(seen_here.insert(*word), "{} lists {word} twice", skill.id);
+                if let Some(first) = taught_in.insert(*word, skill.id) {
+                    panic!("{word} taught in both {first} and {}", skill.id);
+                }
+            }
+        }
+        // The ladder must teach every word in the design table: 22 ids.
+        assert_eq!(taught_in.len(), 22, "ladder must teach 22 words");
     }
 }

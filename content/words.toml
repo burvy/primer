@@ -1,0 +1,160 @@
+# Chapter words: first drafts for the human to edit.
+#
+# One `[[word]]` entry per vocabulary id in DESIGN.md's chapter table.
+# `skill` is the one chapter that teaches it. `gentle` is the plain-language
+# gloss the Gentle look shows; `formal` is the grown-up maths word Ada names;
+# `ada` is Ada's one-line introduction (Gentle voice).
+
+[[word]]
+id = "successor"
+skill = "count-on-within-5"
+gentle = "the next number"
+formal = "successor"
+ada = "After 3 comes 4. That next number has a name: successor."
+
+[[word]]
+id = "function"
+skill = "count-on-within-5"
+gentle = "a rule that turns one number into another"
+formal = "function"
+ada = "Count on is a rule: give it a number, it gives one back. That is a function."
+
+[[word]]
+id = "sum"
+skill = "add-within-10"
+gentle = "the answer when you add"
+formal = "sum"
+ada = "When we add, the answer is called the sum."
+
+[[word]]
+id = "addend"
+skill = "add-within-10"
+gentle = "a number we add"
+formal = "addend"
+ada = "The numbers we add are called addends."
+
+[[word]]
+id = "equation"
+skill = "add-within-10"
+gentle = "a number sentence with an equals sign"
+formal = "equation"
+ada = "A number sentence with an equals sign is an equation."
+
+[[word]]
+id = "equals"
+skill = "add-within-10"
+gentle = "means both sides are the same amount"
+formal = "equals"
+ada = "Equals means both sides are the same amount."
+
+[[word]]
+id = "commutative"
+skill = "add-within-10"
+gentle = "order does not matter when adding"
+formal = "commutative"
+ada = "3 + 4 and 4 + 3 give the same sum. Adding things together is commutative."
+
+[[word]]
+id = "doubles"
+skill = "add-within-10"
+gentle = "twins added together, like 4 + 4"
+formal = "doubles"
+ada = "Twins like 4 + 4 are called doubles."
+
+[[word]]
+id = "unknown"
+skill = "missing-addend-within-10"
+gentle = "the number hiding in the box"
+formal = "unknown"
+ada = "The number hiding in the box is called the unknown."
+
+[[word]]
+id = "fact-family"
+skill = "missing-addend-within-10"
+gentle = "sums that use the same three numbers"
+formal = "fact family"
+ada = "3 + 4 = 7 and 7 - 3 = 4 use the same three numbers. That is a fact family."
+
+[[word]]
+id = "number-bond"
+skill = "make-ten"
+gentle = "two numbers that make ten"
+formal = "number bond"
+ada = "Two numbers that make ten are a number bond."
+
+[[word]]
+id = "compensation"
+skill = "make-ten"
+gentle = "move one to make ten, then give it back"
+formal = "compensation"
+ada = "Move one to make ten, then give it back. That is compensation."
+
+[[word]]
+id = "difference"
+skill = "subtract-within-10"
+gentle = "the answer when you subtract"
+formal = "difference"
+ada = "When we subtract, the answer is called the difference."
+
+[[word]]
+id = "predecessor"
+skill = "subtract-within-10"
+gentle = "the number just before"
+formal = "predecessor"
+ada = "The number just before has a name: predecessor."
+
+[[word]]
+id = "inverse"
+skill = "subtract-within-10"
+gentle = "addition and subtraction undo each other"
+formal = "inverse"
+ada = "Addition and subtraction undo each other. They are inverse."
+
+[[word]]
+id = "ones"
+skill = "add-within-20-no-carry"
+gentle = "single counters"
+formal = "ones"
+ada = "Single counters are called ones."
+
+[[word]]
+id = "tens"
+skill = "add-within-20-no-carry"
+gentle = "a full ten frame"
+formal = "tens"
+ada = "A full ten frame is one ten."
+
+[[word]]
+id = "place-value"
+skill = "add-within-20-no-carry"
+gentle = "where a digit sits tells its size"
+formal = "place value"
+ada = "In 13, the 1 means one ten. Where a digit sits is its place value."
+
+[[word]]
+id = "pattern"
+skill = "subtract-within-20-no-borrow"
+gentle = "something that repeats"
+formal = "pattern"
+ada = "When something repeats, it is a pattern."
+
+[[word]]
+id = "bridge-through-ten"
+skill = "add-within-20-carry"
+gentle = "stop at ten on the way past it"
+formal = "bridge through ten"
+ada = "To add past ten, stop at ten first. That is bridging through ten."
+
+[[word]]
+id = "near-doubles"
+skill = "add-within-20-carry"
+gentle = "almost twins, like 4 + 5"
+formal = "near doubles"
+ada = "4 + 5 is almost twins. We call those near doubles."
+
+[[word]]
+id = "bridge-back-through-ten"
+skill = "subtract-within-20-borrow"
+gentle = "stop at ten on the way back"
+formal = "bridge back through ten"
+ada = "To subtract past ten, stop at ten first. That is bridging back through ten."
