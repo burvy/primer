@@ -42,33 +42,8 @@ Step 'check the certificate and key file are in place (they are copied by hand)'
     }
 }
 
-# Caddy holds the Cloudflare origin certificate and forwards to the server.
-# `auto_https off`: no Let's Encrypt, Cloudflare's certificate is used.
-$cert = $Primer.CertDir.Replace('\', '/')
-$caddyfile = @"
-{
-	auto_https off
-}
-
-$($Primer.Host):$($Primer.PublicPort) {
-	tls $cert/origin.pem $cert/origin.key
-	encode zstd gzip
-	# https only; files are what they say they are; no other site may show
-	# Primer in a frame; other sites see only our host name, never a page
-	# address (Google sign-in needs the host name).
-	header {
-		Strict-Transport-Security "max-age=31536000"
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
-		Referrer-Policy "strict-origin-when-cross-origin"
-	}
-	reverse_proxy $($Primer.LocalAddr)
-}
-"@
-Step "write $($Primer.AppDir)\Caddyfile" {
-    Set-Content (Join-Path $Primer.AppDir 'Caddyfile') $caddyfile
-}
-if ($DryRun) { Write-Host $caddyfile -ForegroundColor DarkGray }
+Step "write $($Primer.AppDir)\Caddyfile (with the page's script hashes)" { Write-Caddyfile }
+if ($DryRun) { Write-Host (New-Caddyfile (New-Csp @('sha256-<hash from dist\index.html>'))) -ForegroundColor DarkGray }
 
 Step "allow port $($Primer.PublicPort) in, from Cloudflare's addresses only" {
     $ranges = @('https://www.cloudflare.com/ips-v4', 'https://www.cloudflare.com/ips-v6') |

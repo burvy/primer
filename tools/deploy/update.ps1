@@ -16,13 +16,21 @@ $source = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 
 Step 'back up the database first' { & (Join-Path $PSScriptRoot 'backup.ps1') }
 Step "stop task '$($Primer.Task)'" { Stop-Primer }
-Step "mirror $source into $($Primer.AppDir), keeping placeholder voices and the Caddyfile" {
+Step "mirror $source into $($Primer.AppDir), keeping placeholder voices" {
     # /MIR makes the folder match the new build exactly (old files go).
     # /XD and /XF leave out what the server made itself, so it stays.
     robocopy $source $Primer.AppDir /MIR /XD placeholder /XF Caddyfile RECORDINGS.md /NFL /NDL /NJH /NJS | Out-Null
     if ($LASTEXITCODE -ge 8) { throw 'robocopy failed' }
     $global:LASTEXITCODE = 0
 }
+Step 'rewrite the Caddyfile: the new web app has new script hashes' { Write-Caddyfile }
 Step 'make placeholder voices for any new lines' { Invoke-Voices }
 Step "start task '$($Primer.Task)'" { Start-ScheduledTask -TaskName $Primer.Task }
+Step "restart task '$($Primer.CaddyTask)' so it reads the new Caddyfile" {
+    Stop-ScheduledTask -TaskName $Primer.CaddyTask -ErrorAction SilentlyContinue
+    Get-Process caddy -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -eq $Primer.CaddyExe } |
+        Stop-Process -Force
+    Start-ScheduledTask -TaskName $Primer.CaddyTask
+}
 Write-Host 'done. The log is in C:\burvy\data\primer\logs\primer-server.log'

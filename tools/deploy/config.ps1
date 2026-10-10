@@ -85,3 +85,83 @@ function Stop-Primer {
         Where-Object { $_.Path -eq $exe } |
         Stop-Process -Force
 }
+
+# The Content-Security-Policy: which places the page may load code, styles,
+# frames and data from. If someone ever slipped a <script> into the page, the
+# browser would refuse to run it, because it is not on this list.
+#   script-src  our own files; 'wasm-unsafe-eval' lets the browser compile
+#               the web app's WebAssembly; the hashes allow Trunk's small
+#               inline start-up script (and nothing else inline); Google's
+#               sign-in script.
+#   style-src   'unsafe-inline' is needed for the style="" attributes the
+#               drawings use; styles cannot run code.
+#   frame-src, connect-src   Google's sign-in button and its calls.
+#   frame-ancestors 'none'   no other site may show Primer in a frame.
+# `$ScriptHashes` are 'sha256-...' sources from Get-InlineScriptHashes.
+function New-Csp {
+    param([string[]] $ScriptHashes)
+    $gsi = 'https://accounts.google.com/gsi/'
+    $hashes = ($ScriptHashes | ForEach-Object { "'$_'" }) -join ' '
+    @(
+        "default-src 'self'"
+        "script-src 'self' 'wasm-unsafe-eval' $hashes ${gsi}client"
+        "style-src 'self' 'unsafe-inline' ${gsi}style"
+        "frame-src $gsi"
+        "connect-src 'self' $gsi"
+        "img-src 'self' data:"
+        "media-src 'self'"
+        "object-src 'none'"
+        "base-uri 'none'"
+        "form-action 'self'"
+        "frame-ancestors 'none'"
+    ) -join '; '
+}
+
+# The hash of each inline <script> in the built page, as CSP wants it:
+# sha256 of the script's text, in base64. Trunk writes one inline script and
+# its text changes with every build (it names the hashed .wasm file), so the
+# hash is worked out from the page actually installed, on every install and
+# update. Browsers read "\r\n" as "\n" before hashing, so we do too.
+function Get-InlineScriptHashes {
+    param([string] $IndexHtml)
+    $html = (Get-Content $IndexHtml -Raw) -replace "`r`n", "`n"
+    $sha = [Security.Cryptography.SHA256]::Create()
+    [regex]::Matches($html, '(?s)<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>') | ForEach-Object {
+        $bytes = [Text.Encoding]::UTF8.GetBytes($_.Groups[1].Value)
+        'sha256-' + [Convert]::ToBase64String($sha.ComputeHash($bytes))
+    }
+}
+
+# The Caddyfile. Caddy holds the Cloudflare origin certificate and forwards
+# to the server; `auto_https off`: no Let's Encrypt, Cloudflare's
+# certificate is used. The headers: https only; files are what they say they
+# are; no framing; other sites see only our host name, never a page address
+# (Google sign-in needs the host name); and the CSP above.
+function New-Caddyfile {
+    param([string] $Csp)
+    $cert = $Primer.CertDir.Replace('\', '/')
+    @"
+{
+	auto_https off
+}
+
+$($Primer.Host):$($Primer.PublicPort) {
+	tls $cert/origin.pem $cert/origin.key
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "$Csp"
+	}
+	reverse_proxy $($Primer.LocalAddr)
+}
+"@
+}
+
+# Writes AppDir\Caddyfile for the web app now in AppDir\dist.
+function Write-Caddyfile {
+    $hashes = @(Get-InlineScriptHashes (Join-Path $Primer.AppDir 'dist\index.html'))
+    Set-Content (Join-Path $Primer.AppDir 'Caddyfile') (New-Caddyfile (New-Csp $hashes))
+}

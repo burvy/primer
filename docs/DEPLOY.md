@@ -1,5 +1,10 @@
 # Deploying Primer to primer.burvy.dev
 
+> **Just trying it on this PC?** Run `.\tools\run-local.ps1` from the repo
+> root and open <http://127.0.0.1:3000>. Add `-Lan` to open it from a phone or
+> tablet on the same Wi-Fi (it prints the address). The rest of this file is
+> for the server.
+
 This sets Primer up on the home Windows server the same way `plgroup-api` runs:
 Cloudflare proxies the host, an Origin Rule sends it to one port on the PC, and
 TLS uses a Cloudflare Origin Certificate with "Full (strict)". The one addition
@@ -45,9 +50,14 @@ The deploy scripts set the client id from `config.ps1` and always clear
 primer.burvy.dev. `PRIMER_DEV_SIGNIN` must be exactly `1`; any other value
 (`true`, `yes`) stops the server with an error instead of being read as "off".
 
-**Running on a laptop** (the prototype): start the server with the flag, for
-example `$env:PRIMER_DEV_SIGNIN = '1'; cargo run -p primer-server`. Without it
-the sign-in page cannot sign you in.
+**Running on a laptop** (the prototype): `.\tools\run-local.ps1` (add `-Lan`
+for phones on the same Wi-Fi). It stops a primer-server it started before on
+port 3000 (never the deployed one), builds the web app, makes any missing
+placeholder voices, and starts the server with `PRIMER_DEV_SIGNIN=1` and no
+Google client id. By hand, the flag is
+`$env:PRIMER_DEV_SIGNIN = '1'; cargo run -p primer-server`; without it the
+sign-in page cannot sign you in. Use `-Lan` only on a network you trust:
+anyone who can open the page is signed in as the same parent.
 
 **Preview, not public, for now.** Keep Cloudflare Access (step 6) on until the
 Google client id exists and you have decided to open the site. Without a
@@ -73,22 +83,10 @@ server at sign-out or when the account is deleted.
 - Why the risk is low today: the page runs only our own scripts and Google's
   sign-in script; Leptos escapes text; raw HTML (`inner_html`) is used only for
   our own drawings and maths, never for anything a person types.
-- The cheaper, bigger win is a Content-Security-Policy header (follow-up card
-  below). A `__Host-session` cookie is not needed for v1.
-
-Follow-up card (not done here; Kevin's area and Caddy):
-
-> **Harden the page against script injection (CSP).** Add a
-> `Content-Security-Policy` to the Caddyfile that `install.ps1` writes,
-> allowing only `'self'`, `'wasm-unsafe-eval'` for the web app, and
-> `https://accounts.google.com/gsi/` for Google's button (script, frame,
-> connect, style), with `frame-ancestors 'none'` and `object-src 'none'`. Check
-> that Trunk's output has no inline script, or add its hash. Test the sign-in
-> page, a lesson with voice and drawings, and the grown-up gate in Chrome and
-> Safari with the console open. Also on the sign-in page: show the local test
-> button only when `/api/auth/config` says `dev_sign_in: true`, and otherwise
-> "Sign-in is not set up on this server" (today the button shows whenever there
-> is no Google client id, and the server answers 404).
+- On top, the Caddyfile sends a Content-Security-Policy (part D): the browser
+  runs only our own scripts, the web app's start-up script (by its hash) and
+  Google's sign-in script, so a slipped-in `<script>` would not run. A
+  `__Host-session` cookie is not needed for v1.
 
 ## B. One-time set-up (Cloudflare, Google, router, server PC)
 
@@ -162,9 +160,27 @@ Last, it makes the placeholder voices with this PC's Windows voice
 
 The Caddyfile sends these headers on every page: `Strict-Transport-Security`
 (https only), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` (no
-other site may show Primer in a frame) and
+other site may show Primer in a frame),
 `Referrer-Policy: strict-origin-when-cross-origin` (other sites see only the
-host name, which Google's sign-in needs).
+host name, which Google's sign-in needs), and a **Content-Security-Policy**
+(`New-Csp` in `config.ps1`, which explains each part):
+
+- scripts only from Primer itself, Google's sign-in script, and Trunk's one
+  inline start-up script, allowed by its sha256 hash; `'wasm-unsafe-eval'`
+  lets the browser compile the web app;
+- styles from Primer and Google's sign-in (`'unsafe-inline'` too, for the
+  drawings' `style=""` attributes; styles cannot run code);
+- frames and calls only to Primer and Google's sign-in; no plugins; no other
+  site may frame Primer.
+
+Trunk's start-up script names the build's hashed files, so its hash changes
+with every build. `install.ps1` and `update.ps1` therefore rewrite the
+Caddyfile from the installed `dist\index.html` each time, and `update.ps1`
+restarts Caddy. Checked in Chrome through a proxy adding this policy: sign-in,
+hero name, the book and a lesson page with drawings worked with no console
+errors; with a wrong hash the page stayed blank, so the policy is enforced.
+Not yet checked: Google's button (needs the client id) and Safari. Do that at
+step 19 with the console open.
 
 The environment `run.ps1` sets:
 
@@ -206,10 +222,10 @@ allowed, check the JavaScript origin in step 7.
 23. `.\tools\deploy\update.ps1`
 
 It backs up the database, stops the server, mirrors the new files into
-`C:\burvy\primer\` (keeping the placeholder voices and the Caddyfile), makes
-voices for any new lines, and starts the server. Database changes are applied
-by the server itself on start (sqlx migrations). The Caddyfile is kept, so a
-change to its headers needs `install.ps1` again (it is safe to re-run).
+`C:\burvy\primer\` (keeping the placeholder voices), rewrites the Caddyfile
+for the new web app, makes voices for any new lines, starts the server and
+restarts Caddy. Database changes are applied by the server itself on start
+(sqlx migrations).
 
 ## G. Backups and restore
 
@@ -241,9 +257,11 @@ To restore:
       lines name only the error.
 - [x] A child's typed explanation is sent to Jev and never stored or logged.
 - [x] Placeholder voices are made on the server, never shipped.
-- [ ] Before going public: the Google client id is set and step 19 passes, the
-      CSP card in part A is done, the privacy policy (slice 15) is up, then
-      remove Cloudflare Access.
+- [x] A Content-Security-Policy allows only our scripts, the start-up script's
+      hash and Google's sign-in (checked in Chrome, part D).
+- [ ] Before going public: the Google client id is set and step 19 passes
+      (including Google's button with the CSP, in Chrome and Safari), the
+      privacy policy (slice 15) is up, then remove Cloudflare Access.
 
 ## I. Take it down
 
