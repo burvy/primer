@@ -1,0 +1,6 @@
+[package]
+name = "primer-lint"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
