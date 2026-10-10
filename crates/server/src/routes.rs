@@ -48,9 +48,9 @@ pub struct AppState {
     pub judge: SharedJudge,
     /// The checked book, loaded once at start.
     pub content: Arc<Content>,
-    /// The Google client id (`PRIMER_GOOGLE_CLIENT_ID`). With none, the
-    /// local dev sign-in is offered instead of Google's.
-    pub google_client_id: Option<String>,
+    /// How parents sign in: Google, the local test sign-in, or neither
+    /// (see [`SignIn::decide`](crate::config::SignIn::decide)).
+    pub sign_in: crate::config::SignIn,
     /// For the call to Google that checks a sign-in.
     pub http: reqwest::Client,
 }
@@ -457,6 +457,15 @@ text = "Correct!"
 
     /// The same, with the judge of your choice.
     async fn app_with(db_file: &std::path::Path, judge: SharedJudge) -> Router {
+        app_signing_in(db_file, judge, crate::config::SignIn::Dev).await
+    }
+
+    /// The same, with the judge and sign-in of your choice.
+    async fn app_signing_in(
+        db_file: &std::path::Path,
+        judge: SharedJudge,
+        sign_in: crate::config::SignIn,
+    ) -> Router {
         let pool = db::connect(&format!("sqlite://{}", db_file.display()))
             .await
             .unwrap();
@@ -473,7 +482,7 @@ text = "Correct!"
             pool,
             judge,
             content: Arc::new(Content::from_sources(&book()).unwrap()),
-            google_client_id: None,
+            sign_in,
             http: reqwest::Client::new(),
         };
         router(
@@ -963,6 +972,22 @@ text = "Correct!"
             call_as::<serde_json::Value>(&app, None, Method::POST, uri, Some(google)).await;
         assert_eq!(code, StatusCode::NOT_FOUND);
         let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn without_the_flag_or_with_google_there_is_no_local_sign_in() {
+        use crate::config::SignIn;
+        for (name, sign_in) in [("off", SignIn::Off), ("google", SignIn::Google("id".into()))] {
+            let file = temp_db(&format!("nodev-{name}"));
+            let app = app_signing_in(&file, Arc::new(FakeJudge), sign_in).await;
+            let uri = "/api/auth/config";
+            let (_, config) =
+                call_as::<primer_api::AuthConfig>(&app, None, Method::GET, uri, None).await;
+            assert!(!config.unwrap().dev_sign_in, "{name}");
+            let dev = status(&app, None, Method::POST, "/api/auth/dev").await;
+            assert_eq!(dev, StatusCode::NOT_FOUND, "{name}");
+            let _ = std::fs::remove_file(&file);
+        }
     }
 
     /// A judge that calls every typed name identifying.

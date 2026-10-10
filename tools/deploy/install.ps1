@@ -53,7 +53,15 @@ $caddyfile = @"
 $($Primer.Host):$($Primer.PublicPort) {
 	tls $cert/origin.pem $cert/origin.key
 	encode zstd gzip
-	header Strict-Transport-Security "max-age=31536000"
+	# https only; files are what they say they are; no other site may show
+	# Primer in a frame; other sites see only our host name, never a page
+	# address (Google sign-in needs the host name).
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
 	reverse_proxy $($Primer.LocalAddr)
 }
 "@

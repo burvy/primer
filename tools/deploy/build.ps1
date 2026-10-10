@@ -2,8 +2,7 @@
 # PC as it is (like burvy-dev's `.\build.ps1 -Deploy`). Run on the dev PC,
 # from the repo root:
 #
-#   .\tools\deploy\build.ps1            preview build (see -Public)
-#   .\tools\deploy\build.ps1 -Public    real build, once sign-in exists
+#   .\tools\deploy\build.ps1
 #   .\tools\deploy\build.ps1 -DryRun    only say what would happen
 #
 # What goes in deploy\primer\:
@@ -16,12 +15,10 @@
 #   tools\deploy\       these scripts, to run on the server
 # Never copied: jev-key.env, primer.db, certificates.
 #
-# -Public builds without the `dev-local` feature. Until sign-in (slice 10)
-# exists, a -Public build has no children and cannot be used; the preview
-# build has one shared built-in child, so it must stay behind Cloudflare
-# Access (see docs/DEPLOY.md).
+# There is one kind of build. How parents sign in is set when the server
+# starts, not when it is built: run.ps1 gives it the Google client id and
+# never turns on the local test sign-in (see Set-PrimerEnv in config.ps1).
 param(
-    [switch] $Public,
     [switch] $DryRun,
     [string] $Out = 'deploy\primer'
 )
@@ -31,9 +28,8 @@ $ErrorActionPreference = 'Stop'
 $repo = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $repo
 
-$features = if ($Public) { @('--no-default-features') } else { @() }
-Step "cargo build --release -p primer-server $features" {
-    cargo build --release -p primer-server @features
+Step 'cargo build --release -p primer-server' {
+    cargo build --release -p primer-server
     if ($LASTEXITCODE -ne 0) { throw 'cargo build failed' }
 }
 Step 'trunk build --release (crates\web)' {
@@ -62,5 +58,7 @@ Step 'copy assets, leaving out placeholder voices' {
     if ($LASTEXITCODE -ge 8) { throw 'robocopy failed' }
     $global:LASTEXITCODE = 0
 }
-$kind = if ($Public) { 'public' } else { 'preview (dev-local)' }
-Write-Host "done: $Out ($kind). Copy it to the server PC, then run install.ps1 or update.ps1 there."
+if ($Primer.GoogleClientId -eq '') {
+    Write-Host 'note: GoogleClientId in config.ps1 is empty, so nobody can sign in on the server yet' -ForegroundColor Yellow
+}
+Write-Host "done: $Out. Copy it to the server PC, then run install.ps1 or update.ps1 there."

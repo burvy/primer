@@ -1,7 +1,8 @@
 //! Parent sign-in, and working out who sent a request.
 //!
-//! Children have no login. A parent signs in with Google (or, when no Google
-//! client id is set, with a clearly-labelled local sign-in) and gets a random
+//! Children have no login. A parent signs in with Google (or, on a laptop
+//! started with `PRIMER_DEV_SIGNIN=1`, with a clearly-labelled local
+//! sign-in; see [`SignIn`]) and gets a random
 //! session token. The browser sends it as `Authorization: Bearer <token>`.
 //!
 //! The [`Parent`] *extractor* is the access control: a handler that lists
@@ -18,6 +19,7 @@ use axum::http::{HeaderMap, StatusCode, header};
 use primer_api::{AuthConfig, GoogleSignIn, SessionDto};
 use serde::Deserialize;
 
+use crate::config::SignIn;
 use crate::db::{self, ParentId};
 use crate::routes::AppState;
 
@@ -122,8 +124,8 @@ async fn start_session(state: &AppState, google_sub: &str) -> Result<Json<Sessio
 /// `GET /api/auth/config`: which sign-in the page should offer.
 pub async fn config(State(state): State<AppState>) -> Json<AuthConfig> {
     Json(AuthConfig {
-        google_client_id: state.google_client_id.clone(),
-        dev_sign_in: state.google_client_id.is_none(),
+        google_client_id: state.sign_in.google_client_id().map(str::to_string),
+        dev_sign_in: state.sign_in == SignIn::Dev,
     })
 }
 
@@ -132,7 +134,7 @@ pub async fn google(
     State(state): State<AppState>,
     Json(body): Json<GoogleSignIn>,
 ) -> Result<Json<SessionDto>, Refusal> {
-    let Some(client_id) = state.google_client_id.as_deref() else {
+    let Some(client_id) = state.sign_in.google_client_id() else {
         return Err((StatusCode::NOT_FOUND, "Google sign-in is not set up"));
     };
     let refused = (StatusCode::UNAUTHORIZED, "invalid Google sign-in");
@@ -151,10 +153,12 @@ pub async fn google(
     start_session(&state, &sub).await
 }
 
-/// `POST /api/auth/dev`: the local sign-in. It exists only while no Google
-/// client id is set, so a real deployment cannot be signed into this way.
+/// `POST /api/auth/dev`: the local sign-in. It answers only when the server
+/// was started with `PRIMER_DEV_SIGNIN=1` and no Google client id (the
+/// server refuses to start with both), so a deployment, which never sets
+/// the flag, cannot be signed into this way.
 pub async fn dev(State(state): State<AppState>) -> Result<Json<SessionDto>, Refusal> {
-    if state.google_client_id.is_some() {
+    if state.sign_in != SignIn::Dev {
         return Err((StatusCode::NOT_FOUND, "no local sign-in"));
     }
     start_session(&state, DEV_SUB).await

@@ -56,6 +56,67 @@ impl JevConfig {
     }
 }
 
+/// How parents may sign in, worked out once at start from two settings:
+/// `PRIMER_GOOGLE_CLIENT_ID` and `PRIMER_DEV_SIGNIN`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SignIn {
+    /// Google's sign-in, with this client id. The real deployment.
+    Google(String),
+    /// The local test sign-in: anyone who opens the page is let in as the
+    /// same parent. Only on a laptop, and only when asked for by name.
+    Dev,
+    /// Neither is set up: nobody can sign in. Safe, if not useful.
+    Off,
+}
+
+impl SignIn {
+    /// Reads the two settings from the environment and decides with
+    /// [`SignIn::decide`]. An empty variable counts as unset.
+    pub fn from_env() -> Result<SignIn, String> {
+        let read = |name| std::env::var(name).ok().filter(|v: &String| !v.is_empty());
+        SignIn::decide(
+            read("PRIMER_GOOGLE_CLIENT_ID"),
+            read("PRIMER_DEV_SIGNIN").as_deref(),
+        )
+    }
+
+    /// The rule, as a pure function so it can be tested:
+    ///
+    /// - The local sign-in is on only with `PRIMER_DEV_SIGNIN=1`. Nothing
+    ///   turns it on by accident: no setting means no local sign-in.
+    /// - It is refused when a Google client id is also set, because a
+    ///   client id means a real deployment. The server will not start, so
+    ///   the mistake is seen at once instead of leaving a way in.
+    /// - Any other value of the flag is refused too, so a typo such as
+    ///   `PRIMER_DEV_SIGNIN=true` is an error, not a silent "off".
+    pub fn decide(
+        google_client_id: Option<String>,
+        dev_flag: Option<&str>,
+    ) -> Result<SignIn, String> {
+        match (google_client_id, dev_flag) {
+            (Some(_), Some(_)) => Err(
+                "PRIMER_DEV_SIGNIN is set together with PRIMER_GOOGLE_CLIENT_ID: \
+                 the local sign-in is never allowed on a real deployment"
+                    .into(),
+            ),
+            (None, Some("1")) => Ok(SignIn::Dev),
+            (None, Some(other)) => Err(format!(
+                "PRIMER_DEV_SIGNIN must be 1 or unset, not {other:?}"
+            )),
+            (Some(id), None) => Ok(SignIn::Google(id)),
+            (None, None) => Ok(SignIn::Off),
+        }
+    }
+
+    /// The Google client id, when Google's sign-in is on.
+    pub fn google_client_id(&self) -> Option<&str> {
+        match self {
+            SignIn::Google(id) => Some(id),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,5 +142,21 @@ mod tests {
         let empty = dir.path().join("empty.env");
         std::fs::write(&empty, " \n").unwrap();
         assert!(JevConfig::from_key_file(&empty).is_none());
+    }
+
+    #[test]
+    fn the_local_sign_in_is_on_only_when_asked_for_and_never_with_google() {
+        let google = || Some("client-id".to_string());
+        assert_eq!(SignIn::decide(None, Some("1")), Ok(SignIn::Dev));
+        assert_eq!(SignIn::decide(None, None), Ok(SignIn::Off));
+        assert_eq!(
+            SignIn::decide(google(), None),
+            Ok(SignIn::Google("client-id".into()))
+        );
+        // A real deployment with the flag left on refuses to start.
+        assert!(SignIn::decide(google(), Some("1")).is_err());
+        assert!(SignIn::decide(google(), Some("0")).is_err());
+        // A typo is an error, not a quiet "off".
+        assert!(SignIn::decide(None, Some("true")).is_err());
     }
 }

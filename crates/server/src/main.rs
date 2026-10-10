@@ -5,7 +5,9 @@
 //! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes) and
 //! `PRIMER_CONTENT` (content, the folder of chapter files) and `PRIMER_ASSETS`
 //! (assets, the folder of drawings, recordings and sounds).
-//! `PRIMER_GOOGLE_CLIENT_ID` (none: local dev sign-in instead of Google's).
+//! `PRIMER_GOOGLE_CLIENT_ID` turns on Google sign-in. `PRIMER_DEV_SIGNIN=1`
+//! turns on the local test sign-in instead (never both: the server refuses
+//! to start). With neither, nobody can sign in.
 //! `PRIMER_JEV_KEY_FILE` (jev-key.env) names the Jev key file; with no such
 //! file the server uses the fake judge.
 //!
@@ -43,6 +45,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("not written yet: {gap}");
     }
 
+    // Google sign-in, the local test sign-in, or neither. A bad mix of
+    // settings stops the server here, before it listens.
+    let sign_in = config::SignIn::from_env()?;
+    match &sign_in {
+        config::SignIn::Google(_) => println!("sign-in: Google"),
+        config::SignIn::Dev => println!("sign-in: LOCAL TEST (PRIMER_DEV_SIGNIN=1), never deploy"),
+        config::SignIn::Off => println!("sign-in: none (no Google id, no PRIMER_DEV_SIGNIN)"),
+    }
     let pool = db::connect(&database).await?;
 
     // The real judge only when a key file exists; otherwise the fake one.
@@ -53,19 +63,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arc::new(judge::FakeJudge)
         }
     };
-    // Parents sign in with Google when a client id is set; without one the
-    // page offers a local sign-in so the prototype still runs.
-    let google_client_id = std::env::var("PRIMER_GOOGLE_CLIENT_ID")
-        .ok()
-        .filter(|id| !id.is_empty());
-    if google_client_id.is_none() {
-        println!("no PRIMER_GOOGLE_CLIENT_ID: parents sign in with the local dev sign-in");
-    }
     let state = AppState {
         pool,
         judge,
         content: Arc::new(content),
-        google_client_id,
+        sign_in,
         http: reqwest::Client::new(),
     };
     let app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));

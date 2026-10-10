@@ -27,6 +27,10 @@ $Primer = @{
     BackupTask  = 'Primer backup'
     # Backups kept (one a day).
     KeepBackups = 14
+    # The Google OAuth client id for Google sign-in (docs/DEPLOY.md, step 7).
+    # It is not a secret: every visitor's browser sees it. Empty: nobody can
+    # sign in yet.
+    GoogleClientId = ''
 }
 
 # Runs `$Action` unless -DryRun was given to the calling script, and always
@@ -51,6 +55,11 @@ function Set-PrimerEnv {
     $env:PRIMER_CONTENT = Join-Path $Primer.AppDir 'content'
     $env:PRIMER_ASSETS = Join-Path $Primer.AppDir 'assets'
     $env:PRIMER_JEV_KEY_FILE = $Primer.KeyFile
+    $env:PRIMER_GOOGLE_CLIENT_ID = $Primer.GoogleClientId
+    # The local test sign-in lets anyone in. It is for a laptop only, so it
+    # is cleared here even if this PC has the variable set for some reason
+    # (with a client id as well, the server would refuse to start).
+    Remove-Item Env:PRIMER_DEV_SIGNIN -ErrorAction SilentlyContinue
 }
 
 # Makes any missing placeholder voices on this machine, with its own Windows
@@ -67,7 +76,12 @@ function Invoke-Voices {
 # Stops the server task. Stopping a task ends the PowerShell that run.ps1
 # runs in, but not always the primer-server.exe it started, so that is
 # stopped too (otherwise its file stays locked and cannot be replaced).
+# Only the copy in AppDir is stopped: a primer-server run from anywhere
+# else on this PC (a test copy, say) is left alone.
 function Stop-Primer {
     Stop-ScheduledTask -TaskName $Primer.Task -ErrorAction SilentlyContinue
-    Get-Process primer-server -ErrorAction SilentlyContinue | Stop-Process -Force
+    $exe = Join-Path $Primer.AppDir 'primer-server.exe'
+    Get-Process primer-server -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -eq $exe } |
+        Stop-Process -Force
 }
