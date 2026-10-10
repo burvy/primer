@@ -158,3 +158,10 @@ skill = "subtract-within-20-borrow"
 gentle = "stop at ten on the way back"
 formal = "bridge back through ten"
 ada = "To subtract past ten, stop at ten first. That is bridging back through ten."
+
+[[word]]
+id = "identity"
+skill = "add-within-10"
+gentle = "zero changes nothing"
+formal = "identity"
+ada = "Adding zero changes nothing. Zero is the identity: $a + 0 = a$."

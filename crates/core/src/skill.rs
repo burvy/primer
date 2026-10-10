@@ -108,7 +108,9 @@ impl Skill {
     pub fn allows(&self, a: u32, b: u32) -> bool {
         let in_range = (self.min_a..=self.max_a).contains(&a)
             && (self.min_b..=self.max_b).contains(&b)
-            && (self.op == Op::Add || b <= a);
+            && (self.op == Op::Add || b <= a)
+            // `0 + 0` teaches nothing, so no chapter asks it.
+            && (a, b) != (0, 0);
         let (whole, crosses_ten) = match self.op {
             Op::Add => (a + b, a % 10 + b % 10 >= 10),
             Op::Sub => (a, a % 10 < b % 10),
@@ -133,7 +135,8 @@ pub const SKILLS: &[Skill] = &[
         id: "count-on-within-5",
         title: "Count on within 5",
         op: Op::Add,
-        min_a: 1,
+        // 0 is allowed as the first number, so `0 + 1` (the successor of zero) works.
+        min_a: 0,
         max_a: 4,
         min_b: 1,
         max_b: 2,
@@ -151,9 +154,10 @@ pub const SKILLS: &[Skill] = &[
         id: "add-within-10",
         title: "Add within 10",
         op: Op::Add,
-        min_a: 2,
+        // 0 is allowed on either side (the identity), but `allows` rejects `0 + 0`.
+        min_a: 0,
         max_a: 9,
-        min_b: 1,
+        min_b: 0,
         max_b: 8,
         max_whole: 10,
         regroup: Regroup::Either,
@@ -168,8 +172,14 @@ pub const SKILLS: &[Skill] = &[
             "equals",
             "commutative",
             "doubles",
+            "identity",
         ],
-        patterns: &[Pattern::Successor, Pattern::Swap, Pattern::Doubles],
+        patterns: &[
+            Pattern::Successor,
+            Pattern::Swap,
+            Pattern::Doubles,
+            Pattern::Identity,
+        ],
         track: Track::Core,
     },
     Skill {
@@ -444,7 +454,7 @@ mod tests {
                 }
             }
         }
-        // The ladder must teach every word in the design table: 22 ids.
-        assert_eq!(taught_in.len(), 22, "ladder must teach 22 words");
+        // The ladder must teach every word in the design table: 22 ids, plus `identity`.
+        assert_eq!(taught_in.len(), 23, "ladder must teach 23 words");
     }
 }

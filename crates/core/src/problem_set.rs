@@ -104,7 +104,11 @@ fn group_fits(skill: &Skill, group: &[Problem]) -> bool {
         .iter()
         .filter_map(|id| Skill::find(id))
         .collect();
-    let known = |p: &Problem| fits(skill, p) || earlier.iter().any(|s| fits(s, p));
+    // Stepping stones may not use zero: `0 + 4` belongs to the chapters that
+    // teach zero, not to every later chapter that builds on them.
+    let known = |p: &Problem| {
+        fits(skill, p) || (p.a() > 0 && p.b() > 0 && earlier.iter().any(|s| fits(s, p)))
+    };
     group.iter().all(known) && group.iter().any(|p| fits(skill, p))
 }
 
@@ -162,5 +166,18 @@ mod tests {
             .find(|set| set.pattern == Some(Pattern::Bridge))
             .expect("bridge is one of chapter 8's patterns");
         assert_eq!(set.problems[0].answer(), 10, "the first sum is 10");
+    }
+
+    #[test]
+    fn zero_appears_only_in_the_chapters_that_teach_it() {
+        let mut rng = StdRng::seed_from_u64(3);
+        for skill in SKILLS.iter().skip(2) {
+            for _ in 0..200 {
+                let set = generate_set(skill, Look::Gentle, &mut rng);
+                for p in &set.problems {
+                    assert!(p.a() > 0 && p.b() > 0, "{}: {p}", set.id);
+                }
+            }
+        }
     }
 }

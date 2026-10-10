@@ -14,6 +14,10 @@ use std::iter;
 
 use crate::problem::{Blank, Op, Problem};
 
+/// The most a bridge may add after making ten: `8 + 5` is `8 + 2`, then 3 more.
+/// Five is as far as chapter 1's "count on" reaches.
+const MAX_REST: u32 = 5;
+
 /// The shapes a run can take. Each example shows the first few problems.
 ///
 /// Most variants are plain names, but an `enum` variant can also *carry
@@ -40,7 +44,11 @@ pub enum Pattern {
     BondWalk { total: u32 },
     /// `3 + 4, 13 + 4`: same ones, one more ten, so the answer has one more ten.
     Parallel { op: Op },
-    /// `8 + 2, 8 + 5`: make ten first, then add the rest.
+    /// `3 + 0, 0 + 3, 7 + 0, 0 + 7`: adding zero changes nothing. Zero is the
+    /// *identity* for addition: the one number that leaves the other alone.
+    Identity,
+    /// `8 + 2, 8 + 5`: make ten first, then add the rest. The second addend
+    /// splits as `5 = 2 + 3`: the part that makes ten, then a small rest.
     Bridge,
     /// `13 - 3, 13 - 5`: go back to ten first, then take the rest.
     BridgeBack,
@@ -60,6 +68,7 @@ impl Pattern {
             Pattern::Undo => "undo",
             Pattern::BondWalk { .. } => "bond-walk",
             Pattern::Parallel { .. } => "parallel",
+            Pattern::Identity => "identity",
             Pattern::Bridge => "bridge",
             Pattern::BridgeBack => "bridge-back",
         }
@@ -78,19 +87,35 @@ impl Pattern {
         let sub = |x, y| Problem::new(x, Op::Sub, y);
         let add_box = |x, y| Problem::with_blank(x, Op::Add, y, Blank::Second);
         let shown = match self {
-            Pattern::Successor => vec![add(a, b)],
+            // Zero is left out of the patterns below on purpose: `3 + 0, 4 + 0`
+            // would look like an identity run, and `0 + 0` is silly. Only
+            // `Identity` shows zero as an addend. `Option::filter` keeps a
+            // problem only when its test is true, otherwise it becomes `None`.
+            Pattern::Successor => vec![add(a, b).filter(|_| b > 0)],
             Pattern::Predecessor => vec![sub(a, b)],
-            Pattern::Swap => vec![add(a, b), add(b, a)],
-            Pattern::Doubles => vec![add(a, a)],
+            Pattern::Swap => vec![
+                add(a, b).filter(|_| a > 0 && b > 0),
+                add(b, a).filter(|_| a > 0 && b > 0),
+            ],
+            Pattern::Doubles => vec![add(a, a).filter(|_| a > 0)],
             Pattern::NearDoubles => vec![add(a, a), add(a, a + 1)],
             Pattern::Family => vec![add(a, b), add(b, a), add_box(a, b), add_box(b, a)],
             Pattern::Undo => vec![add(a, b), sub(a + b, b)],
             Pattern::BondWalk { total } => vec![total.checked_sub(a).and_then(|b| add_box(a, b))],
             Pattern::Parallel { op } => vec![Problem::new(a, op, b), Problem::new(a + 10, op, b)],
-            Pattern::Bridge => vec![
-                10u32.checked_sub(a).and_then(|to_ten| add(a, to_ten)),
-                add(a, b),
-            ],
+            Pattern::Identity => vec![add(a, 0).filter(|_| a > 0), add(0, a).filter(|_| a > 0)],
+            Pattern::Bridge => {
+                // `split` is the part of `b` that makes ten, if `b` really
+                // splits as "make ten, then a small rest" (1 to 5 more).
+                // Otherwise it is `None` and the whole group is dropped.
+                let split = 10u32
+                    .checked_sub(a)
+                    .filter(|&to_ten| to_ten > 0 && b > to_ten && b - to_ten <= MAX_REST);
+                vec![
+                    split.and_then(|to_ten| add(a, to_ten)),
+                    split.and_then(|_| add(a, b)),
+                ]
+            }
             Pattern::BridgeBack => vec![a.checked_sub(10).and_then(|ones| sub(a, ones)), sub(a, b)],
         };
         shown.into_iter().collect()
@@ -242,10 +267,38 @@ mod tests {
     }
 
     #[test]
-    fn bridge_makes_ten_first() {
+    fn identity_adds_zero_and_keeps_the_other_number() {
+        for g in all_groups(Pattern::Identity) {
+            for p in &g {
+                assert!(p.a() == 0 || p.b() == 0, "one addend is zero");
+                assert_eq!(p.answer(), p.a() + p.b(), "the answer is the other addend");
+            }
+            assert_ne!(g[0].answer(), 0, "never 0 + 0");
+        }
+    }
+
+    #[test]
+    fn other_add_patterns_never_show_zero_addends() {
+        for pattern in [Pattern::Successor, Pattern::Swap, Pattern::Doubles] {
+            for g in all_groups(pattern) {
+                for p in &g {
+                    assert!(p.b() > 0, "{p}");
+                    if pattern != Pattern::Successor {
+                        assert!(p.a() > 0, "{p}");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bridge_makes_ten_first_then_splits_the_second_addend() {
         for g in all_groups(Pattern::Bridge) {
             assert_eq!(g[0].answer(), 10);
-            assert_eq!(g[0].a(), g[1].a());
+            assert_eq!(g[0].a(), g[1].a(), "same first addend");
+            // `8 + 2` then `8 + 5`: 5 = 2 + 3, so the rest (3) is 1 to 5.
+            let rest = g[1].b() - g[0].b();
+            assert!((1..=MAX_REST).contains(&rest), "{} then {}", g[0], g[1]);
         }
     }
 
