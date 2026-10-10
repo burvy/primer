@@ -1,0 +1,7 @@
+<!-- PLACEHOLDER Ada silhouette. The human draws the real portrait; code only
+     shows this file (see texture ada in style.css). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="90" fill="#e8dcc0"/>
+  <circle cx="100" cy="78" r="28" fill="#4a3b2a"/>
+  <path d="M100 108 c-30 0 -46 22 -50 52 h100 c-4 -30 -20 -52 -50 -52z" fill="#4a3b2a"/>
+</svg>

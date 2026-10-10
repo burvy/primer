@@ -1,0 +1,195 @@
+/* Primer themes: two looks, one page.
+ *
+ * Every colour, font, texture path and spacing below is a CSS variable
+ * (a named value starting with `--`). The page body sets `data-look` to
+ * "gentle" or "exceptional"; the `[data-look=...]` blocks swap the values,
+ * so flipping looks restyles the page with no code change. To replace a
+ * placeholder texture with real art, the human draws the file and keeps the
+ * same path (or edits one `--texture-*` line). Nothing else needs to move.
+ *
+ * Fonts are self-hosted (SIL Open Font Licence, see assets/fonts/OFL-*.txt):
+ * Andika for reading text, STIX Two Math for equations.
+ */
+
+@font-face {
+  font-family: "Andika";
+  src: url("../../assets/fonts/Andika-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "STIX Two Math";
+  src: url("../../assets/fonts/STIXTwoMath-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Shared defaults: phone-first (360px), scales up on a Chromebook. */
+:root {
+  --font-body: "Andika", system-ui, sans-serif;
+  --font-maths: "STIX Two Math", Georgia, serif;
+  --font-display: Georgia, "Times New Roman", serif;
+
+  --page-max-width: 44rem;
+  --page-padding: 1.25rem;
+  --gap: 1rem;
+  --corner: 0.75rem;
+
+  --text-size: 1.25rem;
+  --text-line: 1.6;
+  --equation-size: 2.5rem;
+  --key-size: 3.5rem;
+
+  --texture-paper: url("../../assets/textures/paper-gentle.svg");
+  --texture-ada: url("../../assets/ada/ada-silhouette.svg");
+  --texture-ornament: url("../../assets/ornaments/divider.svg");
+  --texture-seal: url("../../assets/seals/proved-exceptional.svg");
+
+  --turn-ms: 350ms;
+}
+
+/* Gentle: warm illustrated storybook. Cream paper, warm ink, serif body. */
+[data-look="gentle"] {
+  --paper: #faf3e3;
+  --paper-edge: #e8dcc0;
+  --ink: #4a3b2a;
+  --ink-soft: #7a6a55;
+  --accent: #b3541e;
+  --accent-ink: #fff8ec;
+  --frame: #8a6f4d;
+  --good: #3e7d46;
+  --kind: #a83232;
+
+  --heading-font: var(--font-display);
+  --body-font: var(--font-body);
+  --maths-font: var(--font-maths);
+
+  --page-shadow: 0 2px 12px rgb(74 59 42 / 0.18);
+  --key-face: #fffdf6;
+  --key-edge: #d8c9a8;
+}
+
+/* Exceptional: after Oliver Byrne's 1847 coloured Euclid. Cream paper, flat
+ * red / yellow / blue shapes, black ink, classic serif headings. */
+[data-look="exceptional"] {
+  --paper: #f6f0dd;
+  --paper-edge: #d9cfae;
+  --ink: #1a1a1a;
+  --ink-soft: #4d4d4d;
+  --accent: #d2232a;
+  --accent-ink: #f6f0dd;
+  --frame: #1a1a1a;
+  --good: #1f5fa8;
+  --kind: #d2232a;
+
+  --byrne-red: #d2232a;
+  --byrne-yellow: #f4b400;
+  --byrne-blue: #1f5fa8;
+
+  --heading-font: var(--font-display);
+  --body-font: var(--font-body);
+  --maths-font: var(--font-maths);
+
+  --page-shadow: 0 2px 0 var(--frame), 0 2px 12px rgb(26 26 26 / 0.2);
+  --key-face: #f6f0dd;
+  --key-edge: #1a1a1a;
+}
+
+/* The book page: paper texture, readable type, centred column. */
+.book {
+  background: var(--paper) var(--texture-paper);
+  color: var(--ink);
+  font-family: var(--body-font);
+  font-size: var(--text-size);
+  line-height: var(--text-line);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: var(--page-padding);
+  border: 2px solid var(--frame);
+  border-radius: var(--corner);
+  box-shadow: var(--page-shadow);
+}
+
+/* Lesson headings read like book matter, not app chrome. */
+.book h1,
+.book h2 {
+  font-family: var(--heading-font);
+  line-height: 1.2;
+  margin: 0 0 var(--gap);
+}
+
+/* Exceptional numbers its lessons like Byrne's propositions. */
+[data-look="exceptional"] .proposition::before {
+  content: "Proposition " counter(proposition, upper-roman) ". ";
+  counter-increment: proposition;
+  color: var(--byrne-red);
+}
+.book {
+  counter-reset: proposition;
+}
+
+/* Equations are big, in a real maths font. */
+.equation {
+  font-family: var(--maths-font);
+  font-size: var(--equation-size);
+  text-align: center;
+  margin: var(--gap) 0;
+}
+
+/* The unknown box the child must fill. */
+.equation .box {
+  display: inline-block;
+  min-width: 1.4em;
+  border-bottom: 3px solid var(--ink);
+  text-align: center;
+}
+
+/* Keypad mock: large keys a small finger can hit on a phone. */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, var(--key-size));
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: var(--gap);
+}
+.keypad button {
+  width: var(--key-size);
+  height: var(--key-size);
+  font-family: var(--maths-font);
+  font-size: 1.5rem;
+  background: var(--key-face);
+  color: var(--ink);
+  border: 2px solid var(--key-edge);
+  border-radius: var(--corner);
+}
+
+/* Ada's portrait and the ornament divider come from the texture paths. */
+.ada {
+  width: 6rem;
+  height: 6rem;
+  background: var(--texture-ada) center / contain no-repeat;
+}
+.ornament {
+  height: 2rem;
+  background: var(--texture-ornament) center / contain no-repeat;
+  margin: var(--gap) 0;
+}
+
+/* Page turn: the old page fades and slides like paper lifting. */
+.page-turn {
+  transition: opacity var(--turn-ms) ease, transform var(--turn-ms) ease;
+}
+.page-turn.leaving {
+  opacity: 0;
+  transform: translateX(-2rem) rotateY(8deg);
+}
+
+/* Roomier layout on a Chromebook-width screen. */
+@media (min-width: 48rem) {
+  :root {
+    --page-padding: 2.5rem;
+    --text-size: 1.375rem;
+    --equation-size: 3rem;
+  }
+}

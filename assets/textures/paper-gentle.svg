@@ -1,0 +1,15 @@
+<!-- PLACEHOLDER paper texture (Gentle). The human replaces this with a real
+     watercolour scan, same path, no code change. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#faf3e3"/>
+  <g fill="#e8dcc0" opacity="0.5">
+    <circle cx="40" cy="60" r="2"/>
+    <circle cx="120" cy="200" r="1.5"/>
+    <circle cx="300" cy="120" r="2"/>
+    <circle cx="240" cy="320" r="1.5"/>
+    <circle cx="360" cy="280" r="2"/>
+    <circle cx="80" cy="340" r="1.5"/>
+    <circle cx="180" cy="90" r="1"/>
+    <circle cx="330" cy="40" r="1.5"/>
+  </g>
+</svg>
