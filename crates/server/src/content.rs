@@ -13,6 +13,7 @@
 
 mod check;
 mod convert;
+pub mod feedback;
 mod math;
 mod schema;
 pub mod voice;
@@ -20,12 +21,22 @@ pub mod voice;
 use std::collections::HashMap;
 use std::path::Path;
 
-use primer_api::BeatDto;
+use primer_api::{BeatDto, NoteDto, SetEndDto};
 use primer_core::policy::{Chapter, Step};
-use primer_core::{Look, SKILLS, Skill};
+use primer_core::{Blank, Look, MistakeKind, Op, Problem, SKILLS, Skill, Stage};
+use rand::Rng;
 
 pub use check::ContentError;
+use feedback::{Facts, Hint, Praise, Story, mistake_tag, stage_tag};
 use schema::{ChapterFile, LookTag, WordsFile};
+
+/// What Ada says about answers in one chapter.
+#[derive(Default)]
+struct Sayings {
+    hints: Vec<Hint>,
+    praise: Vec<Praise>,
+    stories: Vec<Story>,
+}
 
 /// Everything loaded from `content/`, already checked.
 pub struct Content {
@@ -37,6 +48,10 @@ pub struct Content {
     lessons: HashMap<(String, String), Vec<BeatDto>>,
     /// For each skill: its first lesson's id and the chapter's title.
     openers: HashMap<String, (String, String)>,
+    /// Hints, praise and word problems of each skill's chapter.
+    sayings: HashMap<String, Sayings>,
+    /// What Ada says when a written set ends, found by the set's id.
+    set_ends: HashMap<String, SetEndDto>,
     /// What is not written yet. Not errors: the server prints them at start.
     pub gaps: Vec<String>,
     /// Every line Ada reads aloud, in book order: the list for the voice actor.
@@ -44,6 +59,53 @@ pub struct Content {
 }
 
 impl Content {
+    /// The hint for a wrong answer to a problem shown at `stage`: the one
+    /// written for that mistake, else any hint for the stage, else none.
+    /// "I don't know" has no mistake, so it is read as an `Unknown` one.
+    pub fn hint(
+        &self,
+        skill: &str,
+        look: Look,
+        stage: Stage,
+        mistake: MistakeKind,
+    ) -> Option<NoteDto> {
+        let hints = &self.sayings.get(skill)?.hints;
+        let found = feedback::pick_hint(hints, look, stage_tag(stage), mistake_tag(mistake))?;
+        Some(found.note.clone())
+    }
+
+    /// A word of praise for a right answer, chosen by `facts` with `rng`.
+    pub fn praise(
+        &self,
+        skill: &str,
+        look: Look,
+        facts: Facts,
+        rng: &mut impl Rng,
+    ) -> Option<NoteDto> {
+        let lines = &self.sayings.get(skill)?.praise;
+        let moments = feedback::moments(facts);
+        let found = feedback::pick_praise(lines, look, &moments, rng)?;
+        Some(found.note.clone())
+    }
+
+    /// The story to tell for `problem` at `stage`, if the book has a word
+    /// problem for this very sum at this stage. Only a sum with its answer
+    /// missing has a story.
+    pub fn story(&self, skill: &str, look: Look, stage: Stage, problem: &Problem) -> Option<NoteDto> {
+        if problem.op() != Op::Add || problem.blank() != Blank::Answer {
+            return None;
+        }
+        let stories = &self.sayings.get(skill)?.stories;
+        let sum = (problem.a(), problem.b());
+        let found = feedback::pick_story(stories, look, stage_tag(stage), sum)?;
+        Some(found.note.clone())
+    }
+
+    /// What Ada says when the written set `set_id` ends, if she says anything.
+    pub fn set_end(&self, set_id: &str) -> Option<SetEndDto> {
+        self.set_ends.get(set_id).cloned()
+    }
+
     /// The chapters to hand the policy for a child in this `look`.
     pub fn chapters(&self, look: Look) -> &[Chapter] {
         match look {
@@ -133,6 +195,8 @@ impl Content {
             exceptional: built.chapters(Look::Exceptional),
             lessons: built.lessons,
             openers: built.openers,
+            sayings: built.sayings,
+            set_ends: built.set_ends,
             gaps: check::coverage(&chapters, words.as_ref()),
             lines,
         })
@@ -168,6 +232,8 @@ struct Built {
     pending: Vec<Pending>,
     lessons: HashMap<(String, String), Vec<BeatDto>>,
     openers: HashMap<String, (String, String)>,
+    sayings: HashMap<String, Sayings>,
+    set_ends: HashMap<String, SetEndDto>,
 }
 
 impl Built {
@@ -212,21 +278,49 @@ impl Built {
             match convert::problem_set(skill, set) {
                 Ok(built) => {
                     lines.push((start, convert::set_lines(set)));
+                    if let Some(end) = convert::set_end(set) {
+                        self.set_ends.insert(set.id.clone(), end);
+                    }
                     steps.push((start, set.look, Step::Set(built)));
                 }
                 Err(messages) => report(&set.id, messages),
             }
         }
+        // What Ada says about answers. Their recordings are listed after the
+        // chapter's lessons and sets (`usize::MAX` sorts them last, and the
+        // sort keeps them in the order written).
+        let mut sayings = Sayings::default();
+        let mut spoken = Vec::new();
         for problem in &chapter.word_problem {
             report(&problem.id, check::check_word_problem(skill, problem));
-            report(&problem.id, unreadable(&problem.text, &problem.formal));
+            match convert::story(problem) {
+                Ok(story) => {
+                    spoken.extend(voice::lines_of(&story.note.voice));
+                    sayings.stories.push(story);
+                }
+                Err(messages) => report(&problem.id, messages),
+            }
         }
         for hint in &chapter.hint {
-            report(&hint.id, unreadable(&hint.text, &hint.formal));
+            match convert::hint(hint) {
+                Ok(hint) => {
+                    spoken.extend(voice::lines_of(&hint.note.voice));
+                    sayings.hints.push(hint);
+                }
+                Err(messages) => report(&hint.id, messages),
+            }
         }
         for praise in &chapter.praise {
-            report(&praise.id, unreadable(&praise.text, &praise.formal));
+            match convert::praise(praise) {
+                Ok(praise) => {
+                    spoken.extend(voice::lines_of(&praise.note.voice));
+                    sayings.praise.push(praise);
+                }
+                Err(messages) => report(&praise.id, messages),
+            }
         }
+        lines.push((usize::MAX, spoken));
+        self.sayings.insert(skill.id.to_string(), sayings);
         self.pending.push(Pending {
             skill,
             steps,
@@ -270,14 +364,6 @@ impl Built {
             })
             .collect()
     }
-}
-
-/// The maths errors in a sentence and its formal twin.
-fn unreadable(text: &str, formal: &Option<String>) -> Vec<String> {
-    std::iter::once(text)
-        .chain(formal.as_deref())
-        .filter_map(|t| math::to_html(t).err())
-        .collect()
 }
 
 #[cfg(test)]
@@ -536,6 +622,11 @@ when = "adds-1"
                 "walk.notice.gentle",
                 "second.1.1.gentle",
                 "second.1.1.exceptional",
+                // What Ada says about answers comes after the chapter's pages:
+                // stories, then hints, then praise.
+                "stones.gentle",
+                "h1.gentle",
+                "p1.gentle",
             ]
         );
         // The speech has the maths spelled out.

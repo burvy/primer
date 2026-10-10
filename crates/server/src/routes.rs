@@ -24,11 +24,16 @@ use primer_api::{
     PageDto, ProblemDto,
 };
 use primer_core::policy;
-use primer_core::{Attempt, Event, Learner, Outcome, Page, Problem, Strategy, detect};
+use primer_core::{
+    Attempt, Event, Learner, MistakeKind, Op, Outcome, Page, Problem, Strategy, detect,
+};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use sqlx::SqlitePool;
 use tower_http::services::ServeDir;
 
 use crate::content::Content;
+use crate::content::feedback::Facts;
 use crate::db;
 use crate::judge::SharedJudge;
 use crate::names::{BLANKS, LOOKS, MISTAKES, OPS, STAGES, name, parse};
@@ -97,6 +102,8 @@ struct Current {
     seed: u64,
     learner: Learner,
     page: Page,
+    /// The latest answer was not right (so a right one now is a recovery).
+    previous_wrong: bool,
 }
 
 /// Load the child, fold their events into a `Learner`, ask the policy.
@@ -107,11 +114,20 @@ async fn current(state: &AppState, id: &str) -> Result<Current, ApiError> {
     let events = db::events(&state.pool, id).await?;
     let learner = Learner::from_events(&events);
     let page = policy::next(&learner, state.content.chapters(child.look), child.look, child.seed);
+    let previous_wrong = events
+        .iter()
+        .rev()
+        .find_map(|event| match event {
+            Event::Attempt(attempt) => Some(attempt.outcome != Outcome::Correct),
+            Event::LessonSeen { .. } => None,
+        })
+        .unwrap_or(false);
     Ok(Current {
         look: child.look,
         seed: child.seed,
         learner,
         page,
+        previous_wrong,
     })
 }
 
@@ -121,7 +137,7 @@ async fn next_page(
     Path(id): Path<String>,
 ) -> Result<Json<PageDto>, ApiError> {
     let now = current(&state, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner, &state.content)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look)))
 }
 
 /// `POST /api/child/{id}/answer`: check an answer, remember it, reply with
@@ -170,16 +186,52 @@ async fn answer(
     });
     db::append(&state.pool, &id, &event).await?;
 
+    // What the praise needs from the learner as they were before this answer
+    // (the next line consumes `now.learner`).
+    let streak_before = now.learner.progress(skill).streak;
+    let answers_before: usize = now.learner.answered.values().sum();
+
     // Fold the new event into the learner we already have; no second query.
     let learner = now.learner.apply(&event);
     let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
+
+    // What Ada says about the answer. A hint after a wrong one ("I don't
+    // know" counts as an unknown slip), praise after a right one, and the
+    // set's question and notice when this answer was the last of its set
+    // (the next page is then not another problem of the same set).
+    let content = &state.content;
+    let correct = outcome == Outcome::Correct;
+    let set_ended = !matches!(&next, Page::Practice { set_id: next_set, .. } if next_set == set_id);
+    let hint = match outcome {
+        Outcome::Correct => None,
+        Outcome::Wrong(kind) => content.hint(skill, now.look, *stage, kind),
+        Outcome::DontKnow => content.hint(skill, now.look, *stage, MistakeKind::Unknown),
+    };
+    let praise = if correct {
+        let facts = Facts {
+            ms_taken: body.ms_taken,
+            adds: (problem.op() == Op::Add).then(|| problem.b()),
+            set_end: set_ended,
+            streak: streak_before + 1,
+            recovered: now.previous_wrong,
+        };
+        // One generator per answer, seeded from the child and how many
+        // answers they have given, so the same answer gets the same praise.
+        let mut rng = StdRng::seed_from_u64(now.seed ^ answers_before as u64);
+        content.praise(skill, now.look, facts, &mut rng)
+    } else {
+        None
+    };
     Ok(Json(AnswerResponse {
-        correct: outcome == Outcome::Correct,
+        correct,
         mistake: match outcome {
             Outcome::Wrong(kind) => Some(name(MISTAKES, kind).to_string()),
             _ => None,
         },
-        next: page_dto(&next, &learner, &state.content),
+        hint,
+        praise,
+        set_end: set_ended.then(|| content.set_end(set_id)).flatten(),
+        next: page_dto(&next, &learner, content, now.look),
     }))
 }
 
@@ -204,7 +256,7 @@ async fn lesson_seen(
     db::append(&state.pool, &id, &event).await?;
     let learner = now.learner.apply(&event);
     let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
-    Ok(Json(page_dto(&next, &learner, &state.content)))
+    Ok(Json(page_dto(&next, &learner, &state.content, now.look)))
 }
 
 /// `POST /api/child/{id}/look`: switch looks, then reply with the next page
@@ -220,7 +272,7 @@ async fn set_look(
         .ok_or(ApiError::NotFound)?;
     db::set_look(&state.pool, &id, look).await?;
     let now = current(&state, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner, &state.content)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look)))
 }
 
 /// `GET /api/child/{id}/audio`: what the child wants to hear.
@@ -265,8 +317,9 @@ fn problem_dto(problem: &Problem) -> ProblemDto {
     }
 }
 
-/// Core page to JSON page.
-fn page_dto(page: &Page, learner: &Learner, content: &Content) -> PageDto {
+/// Core page to JSON page. `look` picks which look's story (word problem)
+/// a problem is told in.
+fn page_dto(page: &Page, learner: &Learner, content: &Content, look: primer_core::Look) -> PageDto {
     match page {
         Page::Lesson {
             skill,
@@ -302,6 +355,7 @@ fn page_dto(page: &Page, learner: &Learner, content: &Content) -> PageDto {
             stage: name(STAGES, *stage).to_string(),
             hint: hint.map(|kind| name(MISTAKES, kind).to_string()),
             easier: *easier,
+            story: content.story(skill, look, *stage, problem).map(Box::new),
         },
         Page::Story => PageDto::Story,
     }
@@ -338,6 +392,26 @@ id = "walk"
 stage = "pictorial"
 pattern = "successor"
 problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1"]
+question = "What do you notice?"
+notice = "Did you see? Each answer is one more."
+formal_notice = "Each answer is the successor."
+
+[[word_problem]]
+id = "stones"
+stage = "pictorial"
+text = "The builder has {a} stones and {b} more."
+a = 0
+b = 1
+
+[[hint]]
+id = "hint-off"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Count the new step."
+
+[[praise]]
+id = "praise-any"
+text = "Correct!"
 "#;
         vec![("01-count-on.toml".to_string(), chapter.to_string())]
     }
@@ -527,6 +601,116 @@ problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1"]
         let app = app(&file).await;
         let (status, _) = call::<PageDto>(&app, Method::GET, "/api/child/nobody/next", None).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    /// Reads the first lesson, then returns the first problem's page.
+    async fn first_problem(app: &Router) -> PageDto {
+        let PageDto::Lesson { skill, lesson, .. } = next(app).await else {
+            panic!("expected the lesson first");
+        };
+        let body = serde_json::json!({ "skill": skill, "lesson": lesson });
+        call(app, Method::POST, "/api/child/kid/lesson-seen", Some(body))
+            .await
+            .1
+            .unwrap()
+    }
+
+    /// Sends `answer` for the problem on `page`, and returns the reply.
+    async fn answer_with(app: &Router, page: &PageDto, answer: Option<u32>) -> AnswerResponse {
+        let PageDto::Practice { page_id, .. } = page else {
+            panic!("expected a problem, got {page:?}");
+        };
+        let body = serde_json::json!({ "page_id": page_id, "answer": answer, "ms_taken": 9000 });
+        let (status, reply) =
+            call(app, Method::POST, "/api/child/kid/answer", Some(body)).await;
+        assert_eq!(status, StatusCode::OK);
+        reply.unwrap()
+    }
+
+    /// The right answer to the problem on `page` (an addition, answer last).
+    fn right_answer(page: &PageDto) -> u32 {
+        let PageDto::Practice { problem, .. } = page else {
+            panic!("expected a problem, got {page:?}");
+        };
+        problem.a + problem.b
+    }
+
+    #[tokio::test]
+    async fn a_word_problem_is_told_at_its_stage_and_sum_only() {
+        let file = temp_db("story");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let PageDto::Practice { problem, story, .. } = &page else {
+            panic!("expected a problem");
+        };
+        // The set starts with `0 + 1` at the pictures stage: the story fits.
+        assert_eq!(problem.text, "0 + 1");
+        let story = story.clone().expect("a story for 0 + 1");
+        let story = *story;
+        assert_eq!(story.text, "The builder has 0 stones and 1 more.");
+        assert_eq!(story.voice.gentle.name, "stones.gentle");
+        // The next problem, `1 + 1`, has no story.
+        let reply = answer_with(&app, &page, Some(1)).await;
+        let PageDto::Practice { story, .. } = reply.next else {
+            panic!("expected a problem");
+        };
+        assert_eq!(story, None);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn a_wrong_answer_brings_its_hint_and_no_praise() {
+        let file = temp_db("hint");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        // `0 + 1 = 2` is one too many: the off-by-one hint.
+        let reply = answer_with(&app, &page, Some(2)).await;
+        assert!(!reply.correct);
+        let hint = reply.hint.expect("a hint");
+        assert_eq!(hint.text, "Count the new step.");
+        assert_eq!(hint.voice.gentle.name, "hint-off.gentle");
+        assert_eq!(reply.praise, None);
+        assert_eq!(reply.set_end, None);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn i_dont_know_gets_the_hint_for_the_stage() {
+        let file = temp_db("dontknow");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let reply = answer_with(&app, &page, None).await;
+        assert!(!reply.correct);
+        // No hint is written for "unknown", so any hint of the stage is used.
+        assert_eq!(reply.hint.map(|h| h.text), Some("Count the new step.".to_string()));
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn a_right_answer_brings_praise_and_a_finished_set_its_question_and_notice() {
+        let file = temp_db("setend");
+        let app = app(&file).await;
+        let mut page = first_problem(&app).await;
+        // Four problems in the set: the notice comes with the last answer only.
+        for done in 1..=4 {
+            let reply = answer_with(&app, &page, Some(right_answer(&page))).await;
+            assert!(reply.correct);
+            assert_eq!(reply.hint, None);
+            assert_eq!(reply.praise.expect("praise").text, "Correct!");
+            if done < 4 {
+                assert_eq!(reply.set_end, None, "after answer {done}");
+            } else {
+                let end = reply.set_end.expect("the set is over");
+                assert_eq!(end.question.unwrap().text, "What do you notice?");
+                let notice = end.notice.unwrap();
+                assert_eq!(notice.text, "Did you see? Each answer is one more.");
+                assert_eq!(notice.formal.as_deref(), Some("Each answer is the successor."));
+                assert_eq!(notice.voice.gentle.name, "walk.notice.gentle");
+                assert_eq!(notice.voice.exceptional.unwrap().name, "walk.notice.exceptional");
+            }
+            page = reply.next;
+        }
         let _ = std::fs::remove_file(&file);
     }
 

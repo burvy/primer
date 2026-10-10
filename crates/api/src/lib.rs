@@ -76,6 +76,26 @@ pub struct VoiceDto {
     pub exceptional: Option<LineDto>,
 }
 
+/// A short line from the book that Ada says: a hint, a word of praise, a
+/// question or notice at the end of a set, or the story of a word problem.
+/// Like a beat, `text` and `formal` are HTML made by the server (the
+/// Exceptional look uses `formal` when there is one), and `voice` says how
+/// to read it aloud.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoteDto {
+    pub text: String,
+    pub formal: Option<String>,
+    pub voice: VoiceDto,
+}
+
+/// What Ada says when a set of problems is finished: first the `question`
+/// (the child taps "I see it"), then the `notice`. Either may be missing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SetEndDto {
+    pub question: Option<NoteDto>,
+    pub notice: Option<NoteDto>,
+}
+
 /// Which sounds the child wants. Remembered per child on the server, like
 /// the look, so the choice follows them to another device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -134,6 +154,10 @@ pub enum PageDto {
         /// The mistake the hint is about, if any (for example `"off_by_one"`).
         hint: Option<String>,
         easier: bool,
+        /// The story to tell instead of the bare sum, when the book has a
+        /// word problem for this sum at this stage. (Boxed so a problem page
+        /// is not much bigger than the other pages.)
+        story: Option<Box<NoteDto>>,
     },
     Story,
 }
@@ -148,10 +172,17 @@ pub struct AnswerRequest {
 
 /// The reply to an answer: was it right, what kind of slip if not, and the
 /// next page, so the browser needs only one round trip per problem.
+///
+/// What Ada says about the answer comes with it: a `hint` after a wrong one,
+/// `praise` after a right one, and `set_end` when that answer finished a set
+/// (shown before `next`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerResponse {
     pub correct: bool,
     pub mistake: Option<String>,
+    pub hint: Option<NoteDto>,
+    pub praise: Option<NoteDto>,
+    pub set_end: Option<SetEndDto>,
     pub next: PageDto,
 }
 
