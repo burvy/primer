@@ -4,7 +4,6 @@
 //! together). The list is a `const`: fixed when the program is built, shared
 //! everywhere, never changed while running.
 
-use super::look::Look;
 use super::problem::Op;
 
 /// How a problem is *shown*: counters, a number line, or the bare equation.
@@ -29,12 +28,28 @@ pub enum Track {
     Core,
 }
 
+/// Whether a chapter's sums cross a ten ("carry" when adding, "borrow" when
+/// subtracting). Looking only at the ones digits: `7 + 5` carries because
+/// 7 + 5 is 10 or more, and `13 - 5` borrows because 3 is less than 5.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Regroup {
+    /// Both kinds are fine (used by the "within 10" chapters).
+    Either,
+    /// Never crosses a ten.
+    Without,
+    /// Always crosses a ten.
+    With,
+}
+
 /// One chapter of the book, for example "make ten" or "3 + box = 7".
 ///
 /// `id` is a short machine name like `"add-within-10"`; `title` is the
 /// chapter heading the child sees. `op` is which kind of sum this chapter
-/// teaches. `min_a`, `max_a`, `min_b`, `max_b` bound the two operands: the
-/// generator (a later slice) picks `a` and `b` inside those ranges.
+/// teaches. `min_a`, `max_a`, `min_b`, `max_b` bound the two operands.
+/// `max_whole` is the biggest number in the sum (the total when adding, the
+/// starting number when subtracting) and `regroup` is the carry rule. Together
+/// they are the chapter's promise: [`Skill::allows`] checks it, and the
+/// generator only picks `a` and `b` that pass.
 /// `missing_addend` says the box sits in the middle (`3 + box = 7`) instead
 /// of at the end (`3 + 4 = box`). `stages` lists how the chapter is shown, in
 /// order. `requires` lists earlier skill ids to master first. `track` is
@@ -48,6 +63,8 @@ pub struct Skill {
     pub max_a: u32,
     pub min_b: u32,
     pub max_b: u32,
+    pub max_whole: u32,
+    pub regroup: Regroup,
     pub missing_addend: bool,
     pub stages: &'static [Stage],
     pub requires: &'static [&'static str],
@@ -72,21 +89,25 @@ impl Skill {
         SKILLS.iter().position(|skill| skill.id == id)
     }
 
-    /// The stages this look actually uses for this skill.
+    /// Does `a op b` keep this chapter's promise?
     ///
-    /// `&[Stage]` is a "slice": a borrowed view of a list. Exceptional skips
-    /// pictorial for every skill after the first, so those children meet the
-    /// number line sooner. The first skill keeps all stages so every child
-    /// starts with counters.
-    pub fn stages_for(&self, look: Look) -> &'static [Stage] {
-        if look == Look::Exceptional
-            && self.id != "count-on-within-5"
-            && self.stages.first() == Some(&Stage::Pictorial)
-        {
-            &self.stages[1..]
-        } else {
-            self.stages
-        }
+    /// True when both numbers are in range, the biggest number stays under
+    /// `max_whole`, and the carry rule holds. Subtracting more than you have
+    /// is never allowed.
+    pub fn allows(&self, a: u32, b: u32) -> bool {
+        let in_range = (self.min_a..=self.max_a).contains(&a)
+            && (self.min_b..=self.max_b).contains(&b)
+            && (self.op == Op::Add || b <= a);
+        let (whole, crosses_ten) = match self.op {
+            Op::Add => (a + b, a % 10 + b % 10 >= 10),
+            Op::Sub => (a, a % 10 < b % 10),
+        };
+        let regroup_ok = match self.regroup {
+            Regroup::Either => true,
+            Regroup::Without => !crosses_ten,
+            Regroup::With => crosses_ten,
+        };
+        in_range && whole <= self.max_whole && regroup_ok
     }
 }
 
@@ -102,6 +123,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 4,
         min_b: 1,
         max_b: 2,
+        max_whole: 5,
+        regroup: Regroup::Either,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &[],
@@ -115,6 +138,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 9,
         min_b: 1,
         max_b: 8,
+        max_whole: 10,
+        regroup: Regroup::Either,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["count-on-within-5"],
@@ -128,6 +153,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 6,
         min_b: 1,
         max_b: 5,
+        max_whole: 10,
+        regroup: Regroup::Either,
         missing_addend: true,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
@@ -137,10 +164,12 @@ pub const SKILLS: &[Skill] = &[
         id: "make-ten",
         title: "Make ten",
         op: Op::Add,
-        min_a: 5,
+        min_a: 6,
         max_a: 9,
-        min_b: 1,
+        min_b: 2,
         max_b: 9,
+        max_whole: 18,
+        regroup: Regroup::With,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
@@ -154,6 +183,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 10,
         min_b: 1,
         max_b: 9,
+        max_whole: 10,
+        regroup: Regroup::Either,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
@@ -167,6 +198,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 19,
         min_b: 1,
         max_b: 8,
+        max_whole: 20,
+        regroup: Regroup::Without,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10", "make-ten"],
@@ -180,6 +213,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 19,
         min_b: 1,
         max_b: 9,
+        max_whole: 20,
+        regroup: Regroup::Without,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-10"],
@@ -193,6 +228,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 15,
         min_b: 5,
         max_b: 14,
+        max_whole: 20,
+        regroup: Regroup::With,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["make-ten", "add-within-20-no-carry"],
@@ -206,6 +243,8 @@ pub const SKILLS: &[Skill] = &[
         max_a: 18,
         min_b: 3,
         max_b: 9,
+        max_whole: 20,
+        regroup: Regroup::With,
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-20-no-borrow", "make-ten"],
@@ -216,6 +255,7 @@ pub const SKILLS: &[Skill] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::problem::Problem;
     use std::collections::HashSet;
 
     #[test]
@@ -231,6 +271,17 @@ mod tests {
         for skill in SKILLS {
             assert!(skill.min_a <= skill.max_a);
             assert!(skill.min_b <= skill.max_b);
+        }
+    }
+
+    #[test]
+    fn every_skill_has_at_least_one_allowed_sum() {
+        for skill in SKILLS {
+            let any = (skill.min_a..=skill.max_a).any(|a| {
+                (skill.min_b..=skill.max_b)
+                    .any(|b| skill.allows(a, b) && Problem::new(a, skill.op, b).is_some())
+            });
+            assert!(any, "{} has no allowed sums", skill.id);
         }
     }
 
@@ -277,18 +328,4 @@ mod tests {
         assert_eq!(Skill::find("no-such-skill"), None);
         assert_eq!(Skill::position("no-such-skill"), None);
     }
-
-    #[test]
-    fn exceptional_skips_pictorial_after_first_skill() {
-        let first = Skill::find("count-on-within-5").unwrap();
-        assert_eq!(first.stages_for(Look::Exceptional).len(), 3);
-        let later = Skill::find("add-within-10").unwrap();
-        assert_eq!(
-            later.stages_for(Look::Exceptional),
-            &[Stage::NumberLine, Stage::Abstract]
-        );
-        assert_eq!(later.stages_for(Look::Gentle).len(), 3);
-    }
 }
-
-

@@ -4,3 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+rand = { version = "0.10.3", default-features = false }
+
+[dev-dependencies]
+rand = { version = "0.10.3", features = ["std_rng"] }
