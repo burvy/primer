@@ -8,3 +8,6 @@ jev-key.env
 
 # primer-lint remembers Jev verdicts here, by line hash.
 /.lint-cache.json
+
+# Release builds gathered by tools/deploy/build.ps1, copied to the server by hand.
+/deploy/
