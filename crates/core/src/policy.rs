@@ -148,6 +148,26 @@ fn tell(learner: &Learner, skill: &'static Skill, story: &Story) -> Page {
     }
 }
 
+/// More practice, asked for by the child: the next problem of a generated set
+/// for `skill_id`, whatever the ladder says is next. It is the same generated
+/// set `next` falls back on at the end of a chapter, so the child can keep
+/// practising a chapter they have finished. `None` if there is no such skill.
+pub fn more_practice(
+    learner: &Learner,
+    chapters: &[Chapter],
+    skill_id: &str,
+    look: Look,
+    seed: u64,
+) -> Option<Page> {
+    let skill = Skill::find(skill_id)?;
+    let steps: &[Step] = chapters
+        .iter()
+        .find(|c| c.skill == skill.id)
+        .map_or(&[], |c| &c.steps);
+    let set = generated(learner, skill, steps, look, seed);
+    Some(practice(learner, skill, &set))
+}
+
 fn lesson(skill: &Skill, id: &str, again: bool) -> Page {
     Page::Lesson {
         skill: skill.id,
@@ -604,4 +624,22 @@ mod tests {
         );
         assert_eq!(learner.answered.get(&story_set_id("tower")), Some(&1));
     }
+
+    #[test]
+    fn more_practice_is_a_generated_set_whatever_the_ladder_says() {
+        // Nothing seen yet: `next` shows the lesson, but the child asked for practice.
+        let learner = Learner::default();
+        let page = more_practice(&learner, &chapters(), CH1, Look::Gentle, SEED).unwrap();
+        let Page::Practice { skill, set_id, .. } = page else {
+            panic!("expected a problem");
+        };
+        assert_eq!(skill, CH1);
+        // Generated sets carry a `#number`; written ones do not.
+        assert!(set_id.contains('#'), "{set_id}");
+        // The same call gives the same problem, and there is no such skill.
+        let again = more_practice(&learner, &chapters(), CH1, Look::Gentle, SEED).unwrap();
+        assert!(matches!(again, Page::Practice { set_id: id, .. } if id == set_id));
+        assert!(more_practice(&learner, &chapters(), "no-such-skill", Look::Gentle, SEED).is_none());
+    }
+
 }

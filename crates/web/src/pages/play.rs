@@ -8,13 +8,14 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{ChildDto, AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
+use primer_api::{ChildDto, ContentsDto, AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
 use primer_core::{Input, Key, Look, press};
 
 use crate::api;
 use crate::audio;
 use crate::components::audio_controls::AudioControls;
 use crate::components::book::{ChapterOpener, Cover};
+use crate::components::contents::Contents;
 use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
 use crate::components::lesson::LessonPage;
@@ -33,6 +34,13 @@ enum Screen {
     Cover(PageDto),
     /// A chapter's opening page, before its first lesson.
     Opener(PageDto),
+    /// The table of contents. `resume` is the page "Carry on" goes to.
+    Contents {
+        toc: ContentsDto,
+        resume: PageDto,
+    },
+    /// A lesson read again from the contents (nothing is recorded).
+    Review(PageDto),
     /// Shown after an answer: what Ada says about it. "Continue" goes on to
     /// the end of the set (if the answer finished one) and then to `next`.
     /// (Boxed: the reply is much bigger than the other screens.)
@@ -81,6 +89,19 @@ fn show_first(result: Result<PageDto, String>) -> Screen {
         }
         other => other,
     }
+}
+
+/// Opens the table of contents. It also puts the child back on the main
+/// path (leaving any more practice), and the page that comes next there is
+/// what "Carry on reading" goes to.
+fn open_contents(screen: RwSignal<Screen>) {
+    spawn_local(async move {
+        let (resume, toc) = (api::practice(None).await, api::contents().await);
+        screen.set(match (resume, toc) {
+            (Ok(resume), Ok(toc)) => Screen::Contents { toc, resume },
+            (Err(message), _) | (_, Err(message)) => Screen::Failed(message),
+        });
+    });
 }
 
 /// The same lesson without its opener: the page after the opener is turned.
@@ -135,7 +156,15 @@ pub fn App(child: ChildDto, #[prop(into)] on_leave: Callback<()>) -> impl IntoVi
     };
 
     // Start in the child's own look, and tell the server so both sides agree.
-    spawn_local(async move { screen.set(show_first(api::set_look(word(start)).await)) });
+    // A child who has not begun sees the cover; one who has starts at the
+    // contents, with "Carry on reading" ready.
+    spawn_local(async move {
+        let first = show_first(api::set_look(word(start)).await);
+        match first {
+            Screen::Page(_) => open_contents(screen),
+            other => screen.set(other),
+        }
+    });
 
     // Switching looks keeps the child on the page they are reading, so it
     // never goes back to an opener.
@@ -155,6 +184,9 @@ pub fn App(child: ChildDto, #[prop(into)] on_leave: Callback<()>) -> impl IntoVi
                 <LookSwitch look=look on_switch=on_switch />
                 <button type="button" class="grown-ups" on:click=move |_| on_leave.run(())>
                     "Grown-ups"
+                </button>
+                <button type="button" class="grown-ups" on:click=move |_| open_contents(screen)>
+                    "Contents"
                 </button>
                 <AudioControls settings=sound on_change=on_sound />
                 // A fresh `leaf` for every screen turns the page. A lesson draws
@@ -229,6 +261,38 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
     Screen::Page(PageDto::Story) => {
         view! { <p>"The end of this part of the book."</p> }.into_any()
     }
+    Screen::Page(PageDto::EndOfBook) => view! {
+        <section class="end-of-book">
+            <h1>"The end, so far"</h1>
+            <p>"You have read all the chapters that are written. More are coming."</p>
+            <button type="button" class="next" on:click=move |_| open_contents(screen)>
+                "Contents ▸"
+            </button>
+        </section>
+    }
+    .into_any(),
+    Screen::Contents { toc, resume } => {
+        let can_resume = !matches!(resume, PageDto::EndOfBook);
+        let on_continue = move |()| screen.set(show(Ok(resume.clone())));
+        let on_lesson = move |(skill, lesson): (String, String)| {
+            spawn_local(async move {
+                screen.set(match api::lesson_again(&skill, &lesson).await {
+                    Ok(page) => Screen::Review(page),
+                    Err(message) => Screen::Failed(message),
+                });
+            });
+        };
+        let on_more = move |skill: String| {
+            spawn_local(async move {
+                screen.set(show(api::practice(Some(&skill)).await));
+            });
+        };
+        view! { <Contents toc resume=can_resume on_continue on_lesson on_more /> }.into_any()
+    }
+    Screen::Review(PageDto::Lesson { beats, .. }) => {
+        view! { <LessonPage beats look on_done=move |()| open_contents(screen) /> }.into_any()
+    }
+    Screen::Review(_) => ().into_any(),
     }
 }
 

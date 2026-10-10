@@ -109,6 +109,8 @@ pub async fn delete_parent(pool: &SqlitePool, parent: ParentId) -> Result<(), sq
 pub struct Child {
     pub look: Look,
     pub seed: u64,
+    /// The skill the child asked more practice on, if they did.
+    pub practice_skill: Option<String>,
 }
 
 /// A child's profile: no real name, only the hero name they chose.
@@ -212,14 +214,30 @@ pub async fn export(pool: &SqlitePool, id: &str) -> Result<Vec<serde_json::Value
 
 /// The child with this id, or `None`. `fetch_optional` gives `Option<Row>`.
 pub async fn child(pool: &SqlitePool, id: &str) -> Result<Option<Child>, sqlx::Error> {
-    let row = sqlx::query("SELECT look, seed FROM children WHERE id = ?")
+    let row = sqlx::query("SELECT look, seed, practice_skill FROM children WHERE id = ?")
         .bind(id)
         .fetch_optional(pool)
         .await?;
     Ok(row.map(|row| Child {
         look: parse(LOOKS, row.get("look")).unwrap_or(Look::Gentle),
         seed: row.get::<i64, _>("seed") as u64,
+        practice_skill: row.get("practice_skill"),
     }))
+}
+
+/// Remembers (or, with `None`, forgets) the skill the child wants more
+/// practice on.
+pub async fn set_practice_skill(
+    pool: &SqlitePool,
+    id: &str,
+    skill: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE children SET practice_skill = ? WHERE id = ?")
+        .bind(skill)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 /// Changes the child's look. Their progress is untouched: it is the same log.

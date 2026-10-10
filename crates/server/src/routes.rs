@@ -20,8 +20,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use primer_api::{
-    AnswerRequest, AnswerResponse, AudioSettings, LessonSeenRequest, LookRequest, OpenerDto,
-    PageDto, ProblemDto,
+    AnswerRequest, AnswerResponse, AudioSettings, ContentsDto, LessonSeenRequest, LookRequest,
+    OpenerDto, PageDto, PracticeRequest, ProblemDto,
 };
 use primer_core::policy;
 use primer_core::{
@@ -73,6 +73,9 @@ pub fn router(state: AppState, dist: PathBuf, assets: PathBuf) -> Router {
         .route("/api/child/{id}/answer", post(answer))
         .route("/api/child/{id}/lesson-seen", post(lesson_seen))
         .route("/api/child/{id}/look", post(set_look))
+        .route("/api/child/{id}/contents", get(contents))
+        .route("/api/child/{id}/lesson/{skill}/{lesson}", get(lesson_again))
+        .route("/api/child/{id}/practice", post(practice))
         .route("/api/child/{id}/audio", get(get_audio).post(set_audio))
         // Recordings and sounds are read from the real `assets/` folder, so a
         // file dropped in is heard at once, with no rebuild of the web app.
@@ -119,6 +122,8 @@ struct Current {
     seed: u64,
     learner: Learner,
     page: Page,
+    /// The skill the child asked more practice on, if they did.
+    focus: Option<String>,
     /// The latest answer was not right (so a right one now is a recovery).
     previous_wrong: bool,
 }
@@ -140,7 +145,7 @@ async fn current(state: &AppState, parent: ParentId, id: &str) -> Result<Current
         .ok_or(ApiError::NotFound)?;
     let events = db::events(&state.pool, id).await?;
     let learner = Learner::from_events(&events);
-    let page = policy::next(&learner, state.content.chapters(child.look), child.look, child.seed);
+    let page = upcoming(&state.content, &learner, child.look, child.seed, child.practice_skill.as_deref());
     let previous_wrong = events
         .iter()
         .rev()
@@ -154,8 +159,24 @@ async fn current(state: &AppState, parent: ParentId, id: &str) -> Result<Current
         seed: child.seed,
         learner,
         page,
+        focus: child.practice_skill,
         previous_wrong,
     })
+}
+
+/// The page the child is to see next: more practice on the skill they asked
+/// for, if they asked; otherwise whatever the policy says comes next.
+fn upcoming(
+    content: &Content,
+    learner: &Learner,
+    look: primer_core::Look,
+    seed: u64,
+    focus: Option<&str>,
+) -> Page {
+    let chapters = content.chapters(look);
+    focus
+        .and_then(|skill| policy::more_practice(learner, chapters, skill, look, seed))
+        .unwrap_or_else(|| policy::next(learner, chapters, look, seed))
 }
 
 /// `GET /api/child/{id}/next`: what should the child see now?
@@ -165,7 +186,7 @@ async fn next_page(
     Path(id): Path<String>,
 ) -> Result<Json<PageDto>, ApiError> {
     let now = current(&state, parent.id, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look, now.focus.is_some())))
 }
 
 /// `POST /api/child/{id}/answer`: check an answer, remember it, reply with
@@ -222,7 +243,7 @@ async fn answer(
 
     // Fold the new event into the learner we already have; no second query.
     let learner = now.learner.apply(&event);
-    let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
+    let next = upcoming(&state.content, &learner, now.look, now.seed, now.focus.as_deref());
 
     // What Ada says about the answer. A hint after a wrong one ("I don't
     // know" counts as an unknown slip), praise after a right one, and the
@@ -260,7 +281,7 @@ async fn answer(
         hint,
         praise,
         set_end: set_ended.then(|| content.set_end(set_id)).flatten(),
-        next: page_dto(&next, &learner, content, now.look),
+        next: page_dto(&next, &learner, content, now.look, now.focus.is_some()),
     }))
 }
 
@@ -285,8 +306,8 @@ async fn lesson_seen(
     };
     db::append(&state.pool, &id, &event).await?;
     let learner = now.learner.apply(&event);
-    let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
-    Ok(Json(page_dto(&next, &learner, &state.content, now.look)))
+    let next = upcoming(&state.content, &learner, now.look, now.seed, now.focus.as_deref());
+    Ok(Json(page_dto(&next, &learner, &state.content, now.look, now.focus.is_some())))
 }
 
 /// `POST /api/child/{id}/look`: switch looks, then reply with the next page
@@ -301,7 +322,64 @@ async fn set_look(
     own(&state, parent.id, &id).await?;
     db::set_look(&state.pool, &id, look).await?;
     let now = current(&state, parent.id, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look, now.focus.is_some())))
+}
+
+/// `GET /api/child/{id}/contents`: the table of contents with the child's
+/// progress on every lesson, set and story.
+async fn contents(
+    State(state): State<AppState>,
+    parent: Parent,
+    Path(id): Path<String>,
+) -> Result<Json<ContentsDto>, ApiError> {
+    let now = current(&state, parent.id, &id).await?;
+    // "Where the child is now" is the main path, not a side trip of more practice.
+    let chapters = state.content.chapters(now.look);
+    let on = match policy::next(&now.learner, chapters, now.look, now.seed) {
+        Page::Lesson { skill, .. } | Page::Practice { skill, .. } => Some(skill),
+        Page::Story => None,
+    };
+    Ok(Json(state.content.contents(now.look, &now.learner, on)))
+}
+
+/// `GET /api/child/{id}/lesson/{skill}/{lesson}`: a lesson to read again.
+/// Nothing is recorded: reading it again changes no progress.
+async fn lesson_again(
+    State(state): State<AppState>,
+    parent: Parent,
+    Path((id, skill, lesson)): Path<(String, String, String)>,
+) -> Result<Json<PageDto>, ApiError> {
+    own(&state, parent.id, &id).await?;
+    let beats = state.content.beats(&skill, &lesson);
+    if beats.is_empty() {
+        return Err(ApiError::Conflict("there is no such lesson"));
+    }
+    Ok(Json(PageDto::Lesson {
+        skill,
+        lesson,
+        again: false,
+        beats: beats.to_vec(),
+        opener: None,
+    }))
+}
+
+/// `POST /api/child/{id}/practice`: ask for more practice on a skill, or
+/// (with `null`) go back to the main path. Replies with the page to show.
+async fn practice(
+    State(state): State<AppState>,
+    parent: Parent,
+    Path(id): Path<String>,
+    Json(body): Json<PracticeRequest>,
+) -> Result<Json<PageDto>, ApiError> {
+    let now = current(&state, parent.id, &id).await?;
+    if let Some(skill) = &body.skill
+        && !state.content.is_written(skill, now.look)
+    {
+        return Err(ApiError::Conflict("there is no practice for that chapter"));
+    }
+    db::set_practice_skill(&state.pool, &id, body.skill.as_deref()).await?;
+    let now = current(&state, parent.id, &id).await?;
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content, now.look, now.focus.is_some())))
 }
 
 /// `GET /api/child/{id}/audio`: what the child wants to hear.
@@ -344,10 +422,24 @@ fn problem_dto(problem: &Problem) -> ProblemDto {
     }
 }
 
-/// Core page to JSON page. A story page's words are found by its set id;
-/// `_look` is no longer needed (the chapters are already split by look) and
-/// can be dropped from the callers in a later tidy-up.
-fn page_dto(page: &Page, learner: &Learner, content: &Content, _look: primer_core::Look) -> PageDto {
+/// Core page to JSON page. A story page's words are found by its set id.
+///
+/// `more` is true when the child asked for more practice. Otherwise a
+/// problem for a chapter with nothing written is not shown (the policy would
+/// generate problems there for ever): the page is the end of the book so far.
+fn page_dto(
+    page: &Page,
+    learner: &Learner,
+    content: &Content,
+    look: primer_core::Look,
+    more: bool,
+) -> PageDto {
+    if let Page::Practice { skill, .. } = page
+        && !more
+        && !content.is_written(skill, look)
+    {
+        return PageDto::EndOfBook;
+    }
     match page {
         Page::Lesson {
             skill,
@@ -1061,6 +1153,104 @@ text = "Correct!"
         let (code, _) =
             call::<serde_json::Value>(&app, Method::POST, "/api/children", Some(bad)).await;
         assert_eq!(code, StatusCode::UNPROCESSABLE_ENTITY);
+        let _ = std::fs::remove_file(&file);
+    }
+
+
+    /// Plays the main path with right answers until the book runs out
+    /// (chapter 2 has nothing written in the test book). Returns the
+    /// final page.
+    async fn play_to_the_end(app: &Router) -> PageDto {
+        let mut page = next(app).await;
+        for _ in 0..80 {
+            page = match &page {
+                PageDto::Lesson { skill, lesson, .. } => {
+                    let body = serde_json::json!({ "skill": skill, "lesson": lesson });
+                    call(app, Method::POST, "/api/child/kid/lesson-seen", Some(body))
+                        .await
+                        .1
+                        .unwrap()
+                }
+                PageDto::Practice { .. } => {
+                    answer_with(app, &page, Some(right_answer(&page))).await.next
+                }
+                _ => return page,
+            };
+        }
+        panic!("the book never ended: {page:?}");
+    }
+
+    #[tokio::test]
+    async fn when_the_written_chapters_run_out_the_page_is_the_end_of_the_book() {
+        let file = temp_db("end");
+        let app = app(&file).await;
+        assert_eq!(play_to_the_end(&app).await, PageDto::EndOfBook);
+        // It stays the end of the book; nothing is generated for ever.
+        assert_eq!(next(&app).await, PageDto::EndOfBook);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn the_contents_show_progress_and_lessons_open_again_without_recording() {
+        let file = temp_db("contents");
+        let app = app(&file).await;
+        let uri = "/api/child/kid/contents";
+        let (_, fresh) = call::<primer_api::ContentsDto>(&app, Method::GET, uri, None).await;
+        let fresh = fresh.unwrap();
+        assert_eq!(fresh.chapters.len(), 1);
+        assert_eq!(fresh.chapters[0].title, "The Next Number");
+        assert_eq!(fresh.chapters[0].status, "current");
+        assert!(fresh.chapters[0].items.iter().all(|i| i.state == "new"));
+
+        play_to_the_end(&app).await;
+        let (_, done) = call::<primer_api::ContentsDto>(&app, Method::GET, uri, None).await;
+        let chapter = &done.unwrap().chapters[0];
+        assert_eq!(chapter.status, "done");
+        assert!(chapter.items.iter().all(|i| i.state == "done"), "{:?}", chapter.items);
+
+        // A lesson can be read again; the page is still the end of the book.
+        let again = "/api/child/kid/lesson/count-on-within-5/intro";
+        let (code, page) = call::<PageDto>(&app, Method::GET, again, None).await;
+        assert_eq!(code, StatusCode::OK);
+        let PageDto::Lesson { beats, again, opener, .. } = page.unwrap() else {
+            panic!("expected the lesson");
+        };
+        assert!(!beats.is_empty() && !again && opener.is_none());
+        let missing = status(&app, Some(TOKEN), Method::GET, "/api/child/kid/lesson/count-on-within-5/nope").await;
+        assert_eq!(missing, StatusCode::CONFLICT);
+        assert_eq!(next(&app).await, PageDto::EndOfBook);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn more_practice_gives_generated_problems_until_the_child_goes_back() {
+        let file = temp_db("more");
+        let app = app(&file).await;
+        play_to_the_end(&app).await;
+        let ask = |skill: Option<&str>| {
+            let body = serde_json::json!({ "skill": skill });
+            call::<PageDto>(&app, Method::POST, "/api/child/kid/practice", Some(body))
+        };
+        // A chapter with nothing written has no practice to offer.
+        assert_eq!(ask(Some("add-within-10")).await.0, StatusCode::CONFLICT);
+
+        let (code, page) = ask(Some("count-on-within-5")).await;
+        assert_eq!(code, StatusCode::OK);
+        let page = page.unwrap();
+        let PageDto::Practice { set_id, .. } = &page else {
+            panic!("expected a problem, got {page:?}");
+        };
+        assert!(set_id.contains('#'), "{set_id}");
+        // The problem can be answered, and the next one is more practice.
+        let reply = answer_with(&app, &page, Some(right_answer(&page))).await;
+        assert!(reply.correct);
+        assert!(matches!(reply.next, PageDto::Practice { .. }));
+        // It lasts across calls ...
+        assert!(matches!(next(&app).await, PageDto::Practice { .. }));
+        // ... until the child goes back to the main path.
+        let (_, back) = ask(None).await;
+        assert_eq!(back.unwrap(), PageDto::EndOfBook);
+        assert_eq!(next(&app).await, PageDto::EndOfBook);
         let _ = std::fs::remove_file(&file);
     }
 
