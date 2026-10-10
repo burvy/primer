@@ -8,7 +8,7 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
+use primer_api::{ChildDto, AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
 use primer_core::{Input, Key, Look, press};
 
 use crate::api;
@@ -103,9 +103,16 @@ fn BookPage(children: Children) -> impl IntoView {
     view! { <main class="book">{children()}</main> }
 }
 
+/// Reading to one child. `child` says who: their hero name is on the cover,
+/// and their look is where the page starts. `on_leave` is the "Grown-ups"
+/// button, which goes to the grown-up check.
 #[component]
-pub fn App() -> impl IntoView {
-    let look = RwSignal::new(Look::Gentle);
+pub fn App(child: ChildDto, #[prop(into)] on_leave: Callback<()>) -> impl IntoView {
+    // Every call below is about this child.
+    api::set_child(&child.id);
+    let start = if child.look == "exceptional" { Look::Exceptional } else { Look::Gentle };
+    let hero = child.hero_name.clone().unwrap_or_else(|| "Reader".to_string());
+    let look = RwSignal::new(start);
     let screen = RwSignal::new(Screen::Loading);
     // What the child wants to hear. The server remembers it per child, so
     // the first thing the page does is ask.
@@ -127,9 +134,8 @@ pub fn App() -> impl IntoView {
         });
     };
 
-    // Start in Gentle, and tell the server so both sides agree. (Remembering
-    // the look per child arrives with child profiles, slice 10.)
-    spawn_local(async move { screen.set(show_first(api::set_look(word(Look::Gentle)).await)) });
+    // Start in the child's own look, and tell the server so both sides agree.
+    spawn_local(async move { screen.set(show_first(api::set_look(word(start)).await)) });
 
     // Switching looks keeps the child on the page they are reading, so it
     // never goes back to an opener.
@@ -147,13 +153,16 @@ pub fn App() -> impl IntoView {
         <div class="shell" data-look=move || word(look.get())>
             <BookPage>
                 <LookSwitch look=look on_switch=on_switch />
+                <button type="button" class="grown-ups" on:click=move |_| on_leave.run(())>
+                    "Grown-ups"
+                </button>
                 <AudioControls settings=sound on_change=on_sound />
                 // A fresh `leaf` for every screen turns the page. A lesson draws
                 // its own leaf for each beat, so it is left out here.
                 {move || {
                     let now = screen.get();
                     let turns = !matches!(&now, Screen::Page(PageDto::Lesson { .. }));
-                    view! { <div class:leaf=turns>{screen_view(now, screen, look)}</div> }
+                    view! { <div class:leaf=turns>{screen_view(now, screen, look, hero.clone())}</div> }
                 }}
             </BookPage>
         </div>
@@ -161,7 +170,7 @@ pub fn App() -> impl IntoView {
 }
 
 /// What one screen looks like.
-fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>) -> AnyView {
+fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero: String) -> AnyView {
     match now {
     Screen::Loading => view! { <p class="note">"Opening the book…"</p> }.into_any(),
     Screen::Failed(message) => {
@@ -192,7 +201,7 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>) -> A
     .into_any(),
     Screen::Cover(page) => {
         let on_open = move |()| screen.set(show(Ok(page.clone())));
-        view! { <Cover on_open /> }.into_any()
+        view! { <Cover hero on_open /> }.into_any()
     }
     Screen::Opener(page) => {
         match page.clone() {

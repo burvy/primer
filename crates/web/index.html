@@ -12,12 +12,15 @@
     <link data-trunk rel="copy-file" href="play.css" />
     <link data-trunk rel="copy-file" href="audio.js" />
     <link data-trunk rel="copy-file" href="art.js" />
+    <link data-trunk rel="copy-file" href="signin.js" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/play.css" />
     <!-- Ada's voice and the sounds; the page calls it (see src/audio.rs). -->
     <script src="/audio.js"></script>
     <!-- Writes labels into hand-drawn boxes (see src/art.rs). -->
     <script src="/art.js"></script>
+    <!-- Google's sign-in button for the parent page (only used when a client id is set). -->
+    <script src="/signin.js"></script>
     <!-- Trunk compiles this crate to WebAssembly and injects it here. -->
     <link data-trunk rel="rust" />
   </head>

@@ -7,5 +7,5 @@ mod components;
 mod pages;
 
 fn main() {
-    leptos::mount::mount_to_body(pages::play::App);
+    leptos::mount::mount_to_body(pages::root::Root);
 }

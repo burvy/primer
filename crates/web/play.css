@@ -589,3 +589,64 @@ body.speaking .ada #mouth-closed {
 .said math {
   font-family: var(--maths-font);
 }
+
+/* ---- Sign-in, readers, hero names, grown-up pages ---- */
+
+.panel {
+  text-align: center;
+}
+.panel h2 {
+  margin-top: calc(var(--gap) * 1.5);
+}
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap);
+  margin: var(--gap) 0;
+}
+.choice {
+  min-width: 8rem;
+}
+/* A small text-style button: Back, Privacy, Export, Grown-ups. */
+.link {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link.danger {
+  color: var(--mark);
+}
+.grown-ups {
+  float: right;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.error {
+  color: var(--mark);
+  min-height: 1.5em;
+}
+.panel input[type="text"],
+.panel select {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink-soft);
+  border-radius: var(--corner);
+}
+.gate-question {
+  font-family: var(--maths-font);
+  font-size: 1.6rem;
+}
+.reader {
+  margin: calc(var(--gap) / 2) 0;
+}

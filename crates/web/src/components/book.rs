@@ -6,22 +6,19 @@ use primer_api::OpenerDto;
 use crate::art;
 use crate::audio;
 
-/// Until children have names of their own (a later slice), the cover says
-/// this where the hero's name goes.
-const HERO: &str = "Reader";
-
 /// The cover: shown once, before the first lesson.
 ///
 /// If `assets/cover.svg` exists, it is the cover: the hero's name is written
 /// into its empty `name-box`, and its own hand-lettered title is used. Without
 /// it the cover is typeset. `on_open` turns the page.
 #[component]
-pub fn Cover(#[prop(into)] on_open: Callback<()>) -> impl IntoView {
+pub fn Cover(hero: String, #[prop(into)] on_open: Callback<()>) -> impl IntoView {
     let art = art::drawing("cover.svg");
     let holder = NodeRef::<leptos::html::Div>::new();
+    let written = hero.clone();
     Effect::new(move |_| {
         if let (Some(_), Some(div)) = (art.get(), holder.get()) {
-            art::write_in(&div, "name-box", HERO, 300.0, 780.0);
+            art::write_in(&div, "name-box", &written, 300.0, 780.0);
         }
     });
     view! {
@@ -29,14 +26,14 @@ pub fn Cover(#[prop(into)] on_open: Callback<()>) -> impl IntoView {
             {move || match art.get() {
                 Some(svg) => view! {
                     <div class="cover-art" node_ref=holder role="img"
-                        aria-label=format!("The Primer, for {HERO}") inner_html=svg></div>
+                        aria-label=format!("The Primer, for {hero}") inner_html=svg></div>
                 }
                 .into_any(),
                 None => view! {
                     <div class="cover-typeset">
                         <h1>"The Primer"</h1>
                         <p class="cover-for">"for"</p>
-                        <p class="cover-name">{HERO}</p>
+                        <p class="cover-name">{hero.clone()}</p>
                     </div>
                 }
                 .into_any(),
