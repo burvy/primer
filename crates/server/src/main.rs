@@ -5,12 +5,16 @@
 //! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes) and
 //! `PRIMER_CONTENT` (content, the folder of chapter files) and `PRIMER_ASSETS`
 //! (assets, the folder of drawings, recordings and sounds).
+//! `PRIMER_JEV_KEY_FILE` (jev-key.env) names the Jev key file; with no such
+//! file the server uses the fake judge.
 //!
 //! `primer-server voices` does not start the server: it makes placeholder
 //! recordings and writes `assets/voice/RECORDINGS.md` (see `voices.rs`).
 
+mod config;
 mod content;
 mod db;
+mod jev;
 mod judge;
 mod names;
 mod routes;
@@ -52,9 +56,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "dev-local")]
     db::ensure_child(&pool, "dev", primer_core::Look::Gentle, 42).await?;
 
+    // The real judge only when a key file exists; otherwise the fake one.
+    let judge: judge::SharedJudge = match config::JevConfig::from_env() {
+        Some(jev) => Arc::new(jev::JevJudge::new(jev)?),
+        None => {
+            println!("no Jev key file: using the fake judge");
+            Arc::new(judge::FakeJudge)
+        }
+    };
     let state = AppState {
         pool,
-        judge: Arc::new(judge::FakeJudge),
+        judge,
         content: Arc::new(content),
     };
     let app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));

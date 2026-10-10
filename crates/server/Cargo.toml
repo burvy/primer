@@ -21,7 +21,11 @@ tokio = { version = "1.53.2", features = ["rt-multi-thread", "macros", "net"] }
 tower-http = { version = "0.7.1", features = ["fs"] }
 latex2mathml = "0.2.3"
 toml = "1.1.8"
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
+secrecy = "0.10.3"
+thiserror = "2"
 
 [dev-dependencies]
 http-body-util = "0.1.5"
+tempfile = "3.27.0"
 tower = { version = "0.5.3", features = ["util"] }

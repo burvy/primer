@@ -1,0 +1,19 @@
+{
+  "model": "jev-latest",
+  "answers": {
+    "mistake": {
+      "type": "choice",
+      "choice": "guess",
+      "probabilities": { "unknown": 0.3, "off_by_one": 0.1, "wrong_operation": 0.1, "digits_swapped": 0.05, "carry_or_borrow": 0.05, "guess": 0.4 },
+      "confidence": 0.41
+    },
+    "strategy": {
+      "type": "choice",
+      "choice": "made_ten",
+      "probabilities": { "unclear": 0.3, "counted_all": 0.1, "counted_on": 0.15, "made_ten": 0.35, "doubles": 0.05, "just_knew": 0.05 },
+      "confidence": 0.35
+    },
+    "frustration": { "type": "noul", "noul": 0.2 }
+  },
+  "usage": { "input_tokens": 305, "output_tokens": 12 }
+}
