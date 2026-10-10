@@ -59,20 +59,10 @@ pub fn LabelEquation(label: String, highlight: Option<String>) -> impl IntoView 
     view! { <p class="equation">{parts}</p> }
 }
 
-/// Text with maths inside `$...$` (LaTeX). Real MathML rendering is slice 12;
-/// until then the maths parts are shown as written, in the maths font.
-/// `split('$')` cuts the text at each dollar sign, so every second piece is
-/// maths.
+/// A sentence from the server. The server has already escaped the words and
+/// turned each `$...$` of LaTeX into MathML, so this only inserts that HTML
+/// (`inner_html`). The browser draws the `<math>` parts in the maths font.
 #[component]
 pub fn RichText(text: String) -> impl IntoView {
-    text.split('$')
-        .enumerate()
-        .map(|(i, piece)| {
-            if i % 2 == 1 {
-                view! { <span class="maths">{piece.to_string()}</span> }.into_any()
-            } else {
-                view! { <span>{piece.to_string()}</span> }.into_any()
-            }
-        })
-        .collect_view()
+    view! { <span inner_html=text></span> }
 }

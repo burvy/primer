@@ -253,3 +253,9 @@ body {
   stroke: var(--frame);
   stroke-width: 2;
 }
+
+/* Maths from the server (MathML) sits in the maths font, a touch larger. */
+.lesson math {
+  font-family: var(--maths-font);
+  font-size: 1.2em;
+}

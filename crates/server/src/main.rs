@@ -2,7 +2,8 @@
 //!
 //! Settings come from environment variables, with local defaults:
 //! `PRIMER_ADDR` (127.0.0.1:3000), `DATABASE_URL` (sqlite://primer.db) and
-//! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes).
+//! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes) and
+//! `PRIMER_CONTENT` (content, the folder of chapter files).
 
 mod content;
 mod db;
@@ -22,6 +23,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = std::env::var("PRIMER_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let database = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://primer.db".into());
     let dist = std::env::var("PRIMER_DIST").unwrap_or_else(|_| "crates/web/dist".into());
+    let content_dir = std::env::var("PRIMER_CONTENT").unwrap_or_else(|_| "content".into());
+
+    // The book is checked before anything starts. Broken content is a
+    // refusal to start, listing every problem, not a surprise for a child.
+    let content = content::Content::load(std::path::Path::new(&content_dir)).map_err(|errors| {
+        let lines: Vec<String> = errors.iter().map(|e| format!("  {e}")).collect();
+        format!("the content is broken:
+{}", lines.join("
+"))
+    })?;
+    for gap in &content.gaps {
+        println!("not written yet: {gap}");
+    }
 
     let pool = db::connect(&database).await?;
 
@@ -32,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         pool,
         judge: Arc::new(judge::FakeJudge),
-        chapters: Arc::new(content::chapters()),
+        content: Arc::new(content),
     };
     let app = routes::router(state, PathBuf::from(dist));
 
