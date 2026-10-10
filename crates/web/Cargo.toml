@@ -4,4 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-wasm-bindgen = "0.2.129"
+gloo-net = "0.7.0"
+leptos = { version = "0.8.22", features = ["csr"] }
+primer-core = { path = "../core" }
+primer-api = { path = "../api" }
+js-sys = "0.3.106"
+serde = { version = "1.0.229", features = ["derive"] }

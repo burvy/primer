@@ -2,7 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Primer</title>
+    <!-- Trunk copies these into dist/. The stylesheet refers to ../../assets,
+         which from the site root resolves to /assets, so the copied folder
+         must be called "assets". -->
+    <link data-trunk rel="copy-dir" href="../../assets" />
+    <link data-trunk rel="copy-file" href="style.css" />
+    <link data-trunk rel="copy-file" href="play.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/play.css" />
     <!-- Trunk compiles this crate to WebAssembly and injects it here. -->
     <link data-trunk rel="rust" />
   </head>

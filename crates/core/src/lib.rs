@@ -5,6 +5,7 @@
 //! this crate build for both the server (native) and the browser (wasm).
 
 mod generate;
+mod keypad;
 mod learner;
 mod look;
 mod mistake;
@@ -16,6 +17,7 @@ mod problem_set;
 mod skill;
 
 pub use generate::generate;
+pub use keypad::{Input, Key, press};
 pub use learner::{
     Attempt, Event, Learner, Outcome, Progress, RECENT, SLOW_MS, Strategy, WINS_NEEDED,
 };

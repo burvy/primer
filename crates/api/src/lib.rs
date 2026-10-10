@@ -19,6 +19,30 @@ pub struct ProblemDto {
     pub text: String,
 }
 
+/// One tap of a lesson: a short sentence and one picture.
+///
+/// `show` names the picture (`"machine"`, `"machines"`, `"tower"`,
+/// `"number-line"`, `"equation"` or `"counters"`). The other fields are small
+/// settings for that picture; a picture ignores the ones it does not use.
+/// `formal` replaces `text` in the Exceptional look. `$...$` in either marks
+/// maths (LaTeX).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BeatDto {
+    pub text: String,
+    pub formal: Option<String>,
+    pub show: String,
+    pub count: Option<u32>,
+    pub adding: Option<u32>,
+    pub at: Option<u32>,
+    pub hop: Option<u32>,
+    pub input: Option<u32>,
+    pub output: Option<u32>,
+    /// A hand-drawn layer of the picture to light up, like `"input-glow"`.
+    pub highlight: Option<String>,
+    pub label: Option<String>,
+    pub open: Option<bool>,
+}
+
 /// What the child sees next. `#[serde(tag = "type")]` writes the variant name
 /// into the JSON as `"type": "practice"`, so the browser can tell them apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,6 +53,8 @@ pub enum PageDto {
         lesson: String,
         /// True when the child is being shown it again after struggling.
         again: bool,
+        /// The lesson, one tap at a time.
+        beats: Vec<BeatDto>,
     },
     Practice {
         /// Send this back with the answer, so a stale page is noticed.
@@ -67,4 +93,11 @@ pub struct AnswerResponse {
 pub struct LessonSeenRequest {
     pub skill: String,
     pub lesson: String,
+}
+
+/// `POST /api/child/{id}/look`: the child switched looks.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LookRequest {
+    /// `"gentle"` or `"exceptional"`.
+    pub look: String,
 }

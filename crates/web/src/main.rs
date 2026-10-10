@@ -1,10 +1,9 @@
-//! Placeholder browser app. The real UI arrives in a later slice; this only
-//! proves Trunk can compile the crate to WebAssembly.
+//! The browser app. Trunk compiles this crate to WebAssembly.
 
-use wasm_bindgen::prelude::*;
+mod api;
+mod components;
+mod pages;
 
-/// Runs automatically when the browser loads the wasm file.
-#[wasm_bindgen(start)]
-fn start() {}
-
-fn main() {}
+fn main() {
+    leptos::mount::mount_to_body(pages::play::App);
+}

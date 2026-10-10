@@ -62,6 +62,16 @@ pub async fn child(pool: &SqlitePool, id: &str) -> Result<Option<Child>, sqlx::E
     }))
 }
 
+/// Changes the child's look. Their progress is untouched: it is the same log.
+pub async fn set_look(pool: &SqlitePool, id: &str, look: Look) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE children SET look = ? WHERE id = ?")
+        .bind(name(LOOKS, look))
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 /// Every event for the child, oldest first.
 pub async fn events(pool: &SqlitePool, child_id: &str) -> Result<Vec<Event>, sqlx::Error> {
     let rows = sqlx::query("SELECT data FROM attempts WHERE child_id = ? ORDER BY id")

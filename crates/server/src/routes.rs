@@ -19,15 +19,18 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use primer_api::{AnswerRequest, AnswerResponse, LessonSeenRequest, PageDto, ProblemDto};
+use primer_api::{
+    AnswerRequest, AnswerResponse, LessonSeenRequest, LookRequest, PageDto, ProblemDto,
+};
 use primer_core::policy::{self, Chapter};
 use primer_core::{Attempt, Event, Learner, Outcome, Page, Problem, Strategy, detect};
 use sqlx::SqlitePool;
 use tower_http::services::ServeDir;
 
+use crate::content;
 use crate::db;
 use crate::judge::SharedJudge;
-use crate::names::{BLANKS, MISTAKES, OPS, STAGES, name};
+use crate::names::{BLANKS, LOOKS, MISTAKES, OPS, STAGES, name, parse};
 
 /// Everything a handler may need. It is cloned for each request, so every
 /// field is cheap to clone: a pool handle, or an `Arc` (a shared pointer).
@@ -45,6 +48,7 @@ pub fn router(state: AppState, dist: PathBuf) -> Router {
         .route("/api/child/{id}/next", get(next_page))
         .route("/api/child/{id}/answer", post(answer))
         .route("/api/child/{id}/lesson-seen", post(lesson_seen))
+        .route("/api/child/{id}/look", post(set_look))
         .fallback_service(ServeDir::new(dist))
         .with_state(state)
 }
@@ -197,6 +201,22 @@ async fn lesson_seen(
     Ok(Json(page_dto(&next, &learner)))
 }
 
+/// `POST /api/child/{id}/look`: switch looks, then reply with the next page
+/// (the policy may choose differently for the other look).
+async fn set_look(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<LookRequest>,
+) -> Result<Json<PageDto>, ApiError> {
+    let look = parse(LOOKS, &body.look).ok_or(ApiError::Conflict("unknown look"))?;
+    db::child(&state.pool, &id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    db::set_look(&state.pool, &id, look).await?;
+    let now = current(&state, &id).await?;
+    Ok(Json(page_dto(&now.page, &now.learner)))
+}
+
 /// Names one problem of one set: the set id plus how many are already
 /// answered. It changes after every answer, so an old page cannot be
 /// answered twice.
@@ -226,6 +246,7 @@ fn page_dto(page: &Page, learner: &Learner) -> PageDto {
             skill: skill.to_string(),
             lesson: lesson.clone(),
             again: *again,
+            beats: content::beats(skill, lesson),
         },
         Page::Practice {
             skill,
@@ -413,6 +434,37 @@ mod tests {
         let app = app(&file).await;
         let (status, _) = call::<PageDto>(&app, Method::GET, "/api/child/nobody/next", None).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn switching_look_keeps_progress_and_rejects_unknown_looks() {
+        let file = temp_db("look");
+        let app = app(&file).await;
+        let before = play_right(&app, 2).await;
+        let (status, _) = call::<PageDto>(
+            &app,
+            Method::POST,
+            "/api/child/kid/look",
+            Some(serde_json::json!({ "look": "exceptional" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        // Same child, same log: still on the same set.
+        let (PageDto::Practice { set_id: a, .. }, PageDto::Practice { set_id: b, .. }) =
+            (before, next(&app).await)
+        else {
+            panic!("expected problems");
+        };
+        assert_eq!(a, b);
+        let (status, _) = call::<PageDto>(
+            &app,
+            Method::POST,
+            "/api/child/kid/look",
+            Some(serde_json::json!({ "look": "purple" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
         let _ = std::fs::remove_file(&file);
     }
 }

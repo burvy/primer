@@ -1,0 +1,114 @@
+/* Play page layout. Only layout lives here: every colour, font and size comes
+ * from the CSS variables in style.css, so both looks restyle everything.
+ * Hand-drawn highlights are layers inside the SVG files; these rules only show
+ * or hide them by id. */
+
+body {
+  margin: 0;
+}
+.shell {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: var(--gap);
+  background: var(--paper-edge);
+  font-family: var(--body-font);
+}
+.look-switch,
+.go,
+.next,
+.dont-know {
+  font-family: var(--body-font);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--key-face);
+  border: 2px solid var(--key-edge);
+  border-radius: var(--corner);
+  padding: 0.5rem 1rem;
+}
+.go,
+.next {
+  display: block;
+  margin: var(--gap) auto 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--frame);
+}
+.go:disabled {
+  opacity: 0.4;
+}
+.dont-know {
+  display: block;
+  margin: 0.5rem auto 0;
+}
+.maths {
+  font-family: var(--maths-font);
+}
+.note,
+.machine-io {
+  color: var(--ink-soft);
+  text-align: center;
+}
+.machine-io {
+  font-family: var(--maths-font);
+}
+.picture {
+  display: block;
+  width: 100%;
+  max-height: 14rem;
+  margin: var(--gap) auto;
+}
+.picture .tick,
+.picture .cell {
+  stroke: var(--ink);
+  fill: none;
+}
+.picture .label {
+  fill: var(--ink);
+  font-family: var(--maths-font);
+  font-size: 12px;
+  text-anchor: middle;
+}
+.picture .hop {
+  stroke: var(--accent);
+  stroke-width: 2;
+  fill: none;
+}
+.picture .counter-a {
+  fill: var(--accent);
+  stroke: var(--ink);
+}
+.picture .counter-b {
+  fill: var(--good);
+  stroke: var(--ink);
+}
+.picture .counter-crossed {
+  fill: none;
+  stroke: var(--kind);
+  stroke-width: 3;
+}
+.picture .marker {
+  fill: var(--accent);
+}
+
+/* The machine drawing: its glows and hatch are separate layers. */
+.machine svg {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  height: auto;
+  margin: 0 auto;
+}
+.machine #input-glow,
+.machine #output-glow,
+.machine #hatch-open {
+  opacity: 0;
+  transition: opacity var(--turn-ms) ease;
+}
+.machine[data-glow="input-glow"] #input-glow,
+.machine[data-glow="output-glow"] #output-glow,
+.machine[data-open="true"] #hatch-open {
+  opacity: 1;
+}
+.machine[data-open="true"] #hatch-closed {
+  opacity: 0;
+}
