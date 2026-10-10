@@ -5,6 +5,8 @@
 //! `primer-lint`, reuse the content loader, its checks and the Jev client
 //! instead of copying them. `pub mod` makes a module visible outside the crate.
 
+pub mod auth;
+pub mod children;
 pub mod config;
 pub mod content;
 pub mod db;

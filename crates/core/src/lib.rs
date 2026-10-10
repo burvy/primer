@@ -5,6 +5,8 @@
 //! this crate build for both the server (native) and the browser (wasm).
 
 mod generate;
+pub mod grown_up;
+mod hero_name;
 mod keypad;
 mod learner;
 mod look;
@@ -17,6 +19,7 @@ mod problem_set;
 mod skill;
 
 pub use generate::generate;
+pub use hero_name::{HeroName, HeroNameError, MAX_LETTERS};
 pub use keypad::{Input, Key, press};
 pub use learner::{
     Attempt, Event, Learner, Outcome, Progress, RECENT, SLOW_MS, Strategy, WINS_NEEDED,

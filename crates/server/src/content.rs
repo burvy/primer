@@ -28,7 +28,7 @@ use rand::Rng;
 
 pub use check::ContentError;
 use feedback::{Facts, Hint, Praise, Story, mistake_tag, stage_tag};
-use schema::{ChapterFile, LookTag, WordsFile};
+use schema::{ChapterFile, HeroNamesFile, LookTag, WordsFile};
 
 /// What Ada says about answers in one chapter.
 #[derive(Default)]
@@ -52,6 +52,8 @@ pub struct Content {
     sayings: HashMap<String, Sayings>,
     /// What Ada says when a written set ends, found by the set's id.
     set_ends: HashMap<String, SetEndDto>,
+    /// The hero names a child may pick, from `hero_names.toml`.
+    pub hero_names: Vec<String>,
     /// What is not written yet. Not errors: the server prints them at start.
     pub gaps: Vec<String>,
     /// Every line Ada reads aloud, in book order: the list for the voice actor.
@@ -151,8 +153,9 @@ impl Content {
     /// Checks and builds the content from `(file name, file text)` pairs.
     ///
     /// Which file is which is decided by its name: `words.toml` is the
-    /// vocabulary, a name starting with a digit (`02-add.toml`) is a chapter,
-    /// and anything else (`_template.toml`, `hero_names.toml`) is left alone.
+    /// vocabulary, `hero_names.toml` the hero names, a name starting with a
+    /// digit (`02-add.toml`) is a chapter, and anything else (`_template.toml`)
+    /// is left alone.
     ///
     /// Errors are collected, not thrown on the first: the writer gets the
     /// whole list in one run.
@@ -160,6 +163,7 @@ impl Content {
         let mut errors = Vec::new();
         let mut chapters: Vec<(String, ChapterFile)> = Vec::new();
         let mut words: Option<WordsFile> = None;
+        let mut hero_names: Vec<String> = Vec::new();
 
         for (name, text) in sources {
             if name == "words.toml" {
@@ -167,6 +171,14 @@ impl Content {
                     Ok(file) => {
                         errors.extend(check::check_words(name, &file));
                         words = Some(file);
+                    }
+                    Err(error) => errors.push(ContentError::new(name, "", error.to_string())),
+                }
+            } else if name == "hero_names.toml" {
+                match toml::from_str::<HeroNamesFile>(text) {
+                    Ok(file) => {
+                        errors.extend(check::check_hero_names(name, &file));
+                        hero_names = file.names;
                     }
                     Err(error) => errors.push(ContentError::new(name, "", error.to_string())),
                 }
@@ -187,6 +199,10 @@ impl Content {
             return Err(errors);
         }
         let lines = built.lines();
+        let mut gaps = check::coverage(&chapters, words.as_ref());
+        if hero_names.is_empty() {
+            gaps.push("hero_names.toml: no names to pick from".to_string());
+        }
         Ok(Content {
             gentle: built.chapters(Look::Gentle),
             exceptional: built.chapters(Look::Exceptional),
@@ -194,7 +210,8 @@ impl Content {
             openers: built.openers,
             sayings: built.sayings,
             set_ends: built.set_ends,
-            gaps: check::coverage(&chapters, words.as_ref()),
+            hero_names,
+            gaps,
             lines,
         })
     }

@@ -1789,6 +1789,7 @@ dependencies = [
  "toml",
  "tower",
  "tower-http 0.7.1",
+ "uuid",
 ]
 
 [[package]]
@@ -2005,6 +2006,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tokio-native-tls",

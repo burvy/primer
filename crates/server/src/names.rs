@@ -32,6 +32,9 @@ pub const MISTAKES: &[(MistakeKind, &str)] = &[
     (MistakeKind::Unknown, "unknown"),
 ];
 
+/// The age bands a child profile may have.
+pub const AGE_BANDS: [&str; 2] = ["5-6", "7-8"];
+
 /// The word for `value`. Every variant is in its table, so the fallback is
 /// never used; it only keeps the function total (no `unwrap`, no panic).
 pub fn name<T: Copy + PartialEq>(table: &[(T, &'static str)], value: T) -> &'static str {

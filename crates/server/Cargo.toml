@@ -3,11 +3,6 @@ name = "primer-server"
 version.workspace = true
 edition.workspace = true
 
-[features]
-# Serves one built-in dev child with no sign-in. Real accounts come later.
-default = ["dev-local"]
-dev-local = []
-
 [dependencies]
 primer-core = { path = "../core" }
 primer-api = { path = "../api" }
@@ -21,9 +16,10 @@ tokio = { version = "1.53.2", features = ["rt-multi-thread", "macros", "net"] }
 tower-http = { version = "0.7.1", features = ["fs"] }
 latex2mathml = "0.2.3"
 toml = "1.1.8"
-reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "query", "native-tls"] }
 secrecy = "0.10.3"
 thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 http-body-util = "0.1.5"
