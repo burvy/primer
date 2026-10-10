@@ -36,8 +36,16 @@ fn kid_mistakes_get_the_right_name() {
         (sum(4, Op::Add, 1), 6, Some(MistakeKind::OffByOne)),
         (sum(9, Op::Sub, 4), 4, Some(MistakeKind::OffByOne)),
         (sum(9, Op::Sub, 4), 6, Some(MistakeKind::OffByOne)),
-        (missing(3, Op::Add, 4, Blank::Second), 3, Some(MistakeKind::OffByOne)),
-        (missing(3, Op::Add, 4, Blank::Second), 5, Some(MistakeKind::OffByOne)),
+        (
+            missing(3, Op::Add, 4, Blank::Second),
+            3,
+            Some(MistakeKind::OffByOne),
+        ),
+        (
+            missing(3, Op::Add, 4, Blank::Second),
+            5,
+            Some(MistakeKind::OffByOne),
+        ),
         // Digits swapped: the child knew the digits but wrote them backwards,
         // like 21 for 12. Only two-digit answers count.
         (sum(8, Op::Add, 4), 21, Some(MistakeKind::DigitsSwapped)),
@@ -52,13 +60,25 @@ fn kid_mistakes_get_the_right_name() {
         (sum(8, Op::Add, 5), 23, Some(MistakeKind::CarryOrBorrow)),
         (sum(13, Op::Sub, 5), 18, Some(MistakeKind::CarryOrBorrow)),
         (sum(14, Op::Sub, 6), 18, Some(MistakeKind::CarryOrBorrow)),
-        (missing(8, Op::Add, 5, Blank::Second), 15, Some(MistakeKind::CarryOrBorrow)),
+        (
+            missing(8, Op::Add, 5, Blank::Second),
+            15,
+            Some(MistakeKind::CarryOrBorrow),
+        ),
         // Wrong operation: added instead of subtracting, or the reverse.
         // On missing-number sums the child adds the two numbers they can see.
         (sum(9, Op::Add, 4), 5, Some(MistakeKind::WrongOperation)),
         (sum(9, Op::Sub, 4), 13, Some(MistakeKind::WrongOperation)),
-        (missing(3, Op::Add, 4, Blank::Second), 10, Some(MistakeKind::WrongOperation)),
-        (missing(3, Op::Add, 4, Blank::First), 11, Some(MistakeKind::WrongOperation)),
+        (
+            missing(3, Op::Add, 4, Blank::Second),
+            10,
+            Some(MistakeKind::WrongOperation),
+        ),
+        (
+            missing(3, Op::Add, 4, Blank::First),
+            11,
+            Some(MistakeKind::WrongOperation),
+        ),
         // Random wrong answers: far from the answer with no clear story.
         // Code leaves these unnamed (None); Jev may judge them later.
         (sum(3, Op::Add, 4), 15, None),
@@ -74,7 +94,11 @@ fn kid_mistakes_get_the_right_name() {
         (sum(5, Op::Add, 5), 0, Some(MistakeKind::CarryOrBorrow)),
         (sum(9, Op::Sub, 2), 11, Some(MistakeKind::WrongOperation)),
         (sum(5, Op::Add, 3), 2, Some(MistakeKind::WrongOperation)),
-        (missing(3, Op::Add, 2, Blank::Second), 8, Some(MistakeKind::WrongOperation)),
+        (
+            missing(3, Op::Add, 2, Blank::Second),
+            8,
+            Some(MistakeKind::WrongOperation),
+        ),
     ];
     for (problem, given, expected) in rows {
         assert_eq!(

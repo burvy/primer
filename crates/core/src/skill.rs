@@ -146,7 +146,7 @@ pub const SKILLS: &[Skill] = &[
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &[],
-        words: &["successor", "function"],
+        words: &["successor", "function", "composition"],
         patterns: &[Pattern::Successor],
         track: Track::Core,
     },
@@ -454,7 +454,8 @@ mod tests {
                 }
             }
         }
-        // The ladder must teach every word in the design table: 22 ids, plus `identity`.
-        assert_eq!(taught_in.len(), 23, "ladder must teach 23 words");
+        // The ladder must teach every word in the design table: 22 ids, plus `identity`
+        // and `composition` (two machines in a row, chapter 1).
+        assert_eq!(taught_in.len(), 24, "ladder must teach 24 words");
     }
 }
