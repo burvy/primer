@@ -16,14 +16,15 @@ mod convert;
 pub mod feedback;
 mod math;
 pub mod schema;
+mod toc;
 pub mod voice;
 
 use std::collections::HashMap;
 use std::path::Path;
 
-use primer_api::{BeatDto, NoteDto, SetEndDto};
+use primer_api::{BeatDto, ContentsDto, NoteDto, SetEndDto};
 use primer_core::policy::{self, Chapter, Step};
-use primer_core::{Look, MistakeKind, Problem, SKILLS, Skill, Stage};
+use primer_core::{Learner, Look, MistakeKind, Problem, SKILLS, Skill, Stage};
 use rand::Rng;
 
 pub use check::ContentError;
@@ -48,6 +49,8 @@ pub struct Content {
     lessons: HashMap<(String, String), Vec<BeatDto>>,
     /// For each skill: its first lesson's id and the chapter's title.
     openers: HashMap<String, (String, String)>,
+    /// Each chapter's title, by skill id.
+    titles: HashMap<String, String>,
     /// Hints, praise and word problems of each skill's chapter.
     sayings: HashMap<String, Sayings>,
     /// What Ada says when a written set ends, found by the set's id.
@@ -61,6 +64,21 @@ pub struct Content {
 }
 
 impl Content {
+    /// The table of contents for a child in `look`: the written chapters with
+    /// their progress. `current` is the skill the child is on now.
+    pub fn contents(&self, look: Look, learner: &Learner, current: Option<&str>) -> ContentsDto {
+        let title = |skill: &str| self.titles.get(skill).cloned().unwrap_or_default();
+        toc::build(self.chapters(look), title, learner, current)
+    }
+
+    /// Is there anything written for this skill (in this look)? A skill
+    /// with nothing written is past the end of the book so far.
+    pub fn is_written(&self, skill: &str, look: Look) -> bool {
+        self.chapters(look)
+            .iter()
+            .any(|c| c.skill == skill && !c.steps.is_empty())
+    }
+
     /// The hint for a wrong answer to a problem shown at `stage`: the one
     /// written for that mistake, else any hint for the stage, else none.
     /// "I don't know" has no mistake, so it is read as an `Unknown` one.
@@ -208,6 +226,7 @@ impl Content {
             exceptional: built.chapters(Look::Exceptional),
             lessons: built.lessons,
             openers: built.openers,
+            titles: built.titles,
             sayings: built.sayings,
             set_ends: built.set_ends,
             hero_names,
@@ -246,6 +265,7 @@ struct Built {
     pending: Vec<Pending>,
     lessons: HashMap<(String, String), Vec<BeatDto>>,
     openers: HashMap<String, (String, String)>,
+    titles: HashMap<String, String>,
     sayings: HashMap<String, Sayings>,
     set_ends: HashMap<String, SetEndDto>,
 }
@@ -273,6 +293,8 @@ impl Built {
             let opener = (first.get_ref().id.clone(), chapter.title.clone());
             self.openers.insert(skill.id.to_string(), opener);
         }
+        self.titles
+            .insert(skill.id.to_string(), chapter.title.clone());
 
         for lesson in &chapter.lesson {
             let (start, lesson) = (lesson.span().start, lesson.get_ref());

@@ -11,8 +11,8 @@ use std::cell::RefCell;
 
 use gloo_net::http::{Request, RequestBuilder};
 use primer_api::{
-    AnswerRequest, AnswerResponse, AudioSettings, AuthConfig, ChildDto, GoogleSignIn, HeroRequest,
-    LessonSeenRequest, LookRequest, NewChild, PageDto, SessionDto,
+    AnswerRequest, AnswerResponse, AudioSettings, AuthConfig, ChildDto, ContentsDto, GoogleSignIn,
+    HeroRequest, LessonSeenRequest, LookRequest, NewChild, PageDto, PracticeRequest, SessionDto,
 };
 use serde::de::DeserializeOwned;
 
@@ -149,6 +149,25 @@ pub async fn lesson_seen(skill: &str, lesson: &str) -> Result<PageDto, String> {
 
 pub async fn set_look(look: &str) -> Result<PageDto, String> {
     read(post("look", &LookRequest { look: look.into() })?).await
+}
+
+/// The table of contents, with the child's progress.
+pub async fn contents() -> Result<ContentsDto, String> {
+    read(get(&format!("{}/contents", child_path()))?).await
+}
+
+/// A lesson to read again (nothing is recorded).
+pub async fn lesson_again(skill: &str, lesson: &str) -> Result<PageDto, String> {
+    read(get(&format!("{}/lesson/{skill}/{lesson}", child_path()))?).await
+}
+
+/// More practice on `skill`, or (`None`) back to the main path. Replies with
+/// the page to show.
+pub async fn practice(skill: Option<&str>) -> Result<PageDto, String> {
+    let body = PracticeRequest {
+        skill: skill.map(str::to_string),
+    };
+    read(post("practice", &body)?).await
 }
 
 /// What the child wants to hear.

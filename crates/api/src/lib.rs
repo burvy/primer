@@ -160,6 +160,50 @@ pub enum PageDto {
         story: Option<Box<NoteDto>>,
     },
     Story,
+    /// The written chapters have run out: the end of the book so far.
+    EndOfBook,
+}
+
+/// The table of contents: every written chapter, with the child's progress.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContentsDto {
+    pub chapters: Vec<ChapterDto>,
+}
+
+/// One chapter of the contents.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChapterDto {
+    /// Counting from 1, in ladder order (the same number as the opener).
+    pub number: u32,
+    pub skill: String,
+    pub title: String,
+    /// `"done"` (mastered), `"current"` (where the child is now) or `"later"`.
+    pub status: String,
+    /// Its lessons, sets and stories, in the order they are met.
+    pub items: Vec<ItemDto>,
+}
+
+/// One lesson, set or story in a chapter, and how far the child is with it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ItemDto {
+    /// `"lesson"`, `"set"` or `"story"`.
+    pub kind: String,
+    /// A lesson's id (to open it again); the id of a set or story otherwise.
+    pub id: String,
+    /// "Lesson 1", "Practice 2", "Story 1".
+    pub label: String,
+    /// `"new"`, `"started"` or `"done"`.
+    pub state: String,
+    /// Problems answered so far, and in all (a lesson counts 1 of 1 once seen).
+    pub done: u32,
+    pub total: u32,
+}
+
+/// `POST /api/child/{id}/practice`: ask for more practice on a skill, or
+/// (`null`) go back to the main path.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PracticeRequest {
+    pub skill: Option<String>,
 }
 
 /// `POST /api/child/{id}/answer`. An `answer` of `null` means "I don't know".

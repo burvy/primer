@@ -2,6 +2,7 @@
 
 pub mod audio_controls;
 pub mod book;
+pub mod contents;
 pub mod equation;
 pub mod keypad;
 pub mod lesson;
