@@ -20,6 +20,13 @@ formal = "function"
 ada = "Count on is a rule: give it a number, it gives one back. That is a function."
 
 [[word]]
+id = "composition"
+skill = "count-on-within-5"
+gentle = "joining machines: one machine's output goes into the next"
+formal = "composition"
+ada = "Join two machines so the first one's output goes into the second. That is composition."
+
+[[word]]
 id = "sum"
 skill = "add-within-10"
 gentle = "the answer when you add"
@@ -60,6 +67,20 @@ skill = "add-within-10"
 gentle = "twins added together, like 4 + 4"
 formal = "doubles"
 ada = "Twins like 4 + 4 are called doubles."
+
+[[word]]
+id = "set"
+skill = "add-within-10"
+gentle = "a collection of things"
+formal = "set"
+ada = "A pouch of coins is a collection. Mathematicians call a collection a set."
+
+[[word]]
+id = "natural-numbers"
+skill = "add-within-10"
+gentle = "the counting numbers: 0, 1, 2, 3, and on forever"
+formal = 'natural numbers, $\mathbb{N}$'
+ada = 'The counting numbers $0, 1, 2, 3, \dots$ are called the natural numbers.'
 
 [[word]]
 id = "unknown"

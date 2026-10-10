@@ -1,0 +1,331 @@
+# Chapter 2: Add within 10. Sums stay at or under 10. Zero is allowed, but never 0 + 0.
+# Words: sum, addend, equation, equals, commutative, set, natural numbers, identity, doubles.
+# Shape: four short lessons, each followed by its practice set (like chapter 1).
+
+skill = "add-within-10"
+title = "Joining"
+
+# Lesson 1: joining two groups (sum, addend, equation, equals)
+[[lesson]]
+id = "ch2-joining"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + 4"
+
+[[lesson.step.beat]]
+text = "A builder has two money pouches for buying stones. One with 3 gold coins, another with 4 gold coins."
+show = "pouches"
+left = 3
+right = 4
+
+[[lesson.step.beat]]
+text = "The builder spills both pouches onto a tower step. How many coins are on that tower step?"
+formal = "The builder spills both pouches on a step. How many coins are on the step?"
+show = "pouches"
+left = 3
+right = 4
+join = true
+
+[[lesson.step.beat]]
+text = "7 coins. Joining two groups is called adding."
+show = "pouches"
+left = 3
+right = 4
+join = true
+total = 7
+
+[[lesson.step]]
+stage = "number-line"
+example = "3 + 4"
+
+[[lesson.step.beat]]
+text = "Stand on 3. Hop 4 times: 4, 5, 6, 7."
+show = "number-line"
+at = 3
+hop = 4
+
+[[lesson.step]]
+stage = "abstract"
+example = "3 + 4"
+
+[[lesson.step.beat]]
+text = "We write it as $3 + 4 = 7$. A number sentence like this is an equation."
+formal = "$3 + 4 = 7$ is an equation: a sentence made of numbers."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "The numbers we add, 3 and 4, are the addends."
+formal = "3 and 4 are the addends."
+show = "equation"
+highlight = "addends"
+
+[[lesson.step.beat]]
+text = "The answer, 7, is the sum."
+formal = "7 is the sum."
+show = "equation"
+highlight = "answer"
+
+[[lesson.step.beat]]
+text = "The sign $=$ means equals: both sides are the same amount."
+formal = "$=$ means equals: the left and right side describe the same number."
+show = "equation"
+highlight = "equals"
+
+# Practice: different sums, climbing the stages.
+[[problem_set]]
+id = "ch2-joining-set"
+stage = "pictorial"
+look = "both"
+pattern = "successor"
+problems = ["3 + 4", "2 + 5", "4 + 4", "5 + 4"]
+question = "Look at $4 + 4$ and $5 + 4$. What do you notice?"
+notice = "Did you see? When one addend goes up by 1, the sum goes up by 1 too."
+formal_notice = "Add 1 to an addend and the sum becomes its successor."
+
+# ============================================================
+# Lesson 2: the swap rule (commutative)
+# ============================================================
+[[lesson]]
+id = "ch2-swap"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + 5"
+
+[[lesson.step.beat]]
+text = "Let the builder have a pouch of 3 coins and another pouch of 5. Together, there are 8 coins."
+formal = "Let there be a pouch of 3 coins and another with 5. Together, there are 8 coins."
+show = "pouches"
+left = 3
+right = 5
+total = 8
+
+[[lesson.step.beat]]
+text = "Now the pouches swap places. A pouch of 5 and a pouch of 3."
+show = "pouches"
+left = 5
+right = 3
+swap = true
+
+[[lesson.step.beat]]
+text = "There are still 8 coins altogether. Swapping the pouches did not change their sum."
+formal = "Their sum is still 8. Swapping did not change their sum."
+show = "pouches"
+left = 5
+right = 3
+total = 8
+
+[[lesson.step]]
+stage = "abstract"
+example = "3 + 5"
+
+[[lesson.step.beat]]
+text = "$3 + 5 = 5 + 3$. This is the swap rule. Swapping numbers does not change the sum."
+formal = "$3 + 5 = 5 + 3$. Addition is commutative. Swapping numbers does not change the sum."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "This is called commutativity. The order in which you add numbers does not matter."
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'A collection of things is called a set. The numbers we count with, $0, 1, 2, 3, \dots$, form a set called the natural numbers, written $\mathbb{N}$.'
+formal = 'A collection of things is called a set. The counting numbers $0, 1, 2, 3, \dots$ form a set called the natural numbers, written $\mathbb{N}$.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'For any numbers $a$ and $b$ in $\mathbb{N}$, $a + b = b + a$. The sums are the same no matter the order.'
+formal = 'For every $a$ and $b$ in $\mathbb{N}$: $a + b = b + a$.'
+show = "equation"
+
+[[problem_set]]
+id = "ch2-swap-set"
+stage = "number-line"
+look = "both"
+pattern = "swap"
+problems = ["3 + 5", "5 + 3", "2 + 6", "6 + 2"]
+question = "What do you notice about each pair?"
+notice = "Did you see? Swapping the addends kept the sum. That is commutativity."
+formal_notice = "Each pair shows $a + b = b + a$."
+
+# Lesson 3: zero changes nothing (identity)
+[[lesson]]
+id = "ch2-zero"
+look = "both"
+
+[[lesson.step]]
+stage = "abstract"
+example = "4 + 0"
+
+[[lesson.step.beat]]
+text = "Here is a new function. It adds 0."
+show = "machine"
+label = "+0"
+
+[[lesson.step.beat]]
+text = "Put in 4. Out comes... 4."
+formal = "Input 4, output 4."
+show = "machine"
+label = "+0"
+input = 4
+output = 4
+
+[[lesson.step.beat]]
+text = "Put in 7. Out comes 7. Adding zero changes nothing."
+formal = "Input 7, output 7. Nothing changed."
+show = "machine"
+label = "+0"
+input = 7
+output = 7
+
+[[lesson.step.beat]]
+text = "A number that changes nothing is called the identity. For any number, adding 0 gives you the same number."
+formal = 'Zero is the identity for addition. For every $a$ in $\mathbb{N}$: $a + 0 = a$.'
+show = "machine"
+label = "+0"
+
+[[problem_set]]
+id = "ch2-zero-set"
+stage = "abstract"
+look = "both"
+pattern = "identity"
+problems = ["3 + 0", "0 + 3", "7 + 0", "0 + 7"]
+question = "What did zero do?"
+notice = "Did you see? Adding zero changed nothing, even when zero came first."
+formal_notice = 'For every $a$ in $\mathbb{N}$: $a + 0 = a$ and $0 + a = a$. Zero is the identity.'
+
+# ============================================================
+# Lesson 4: twins (doubles)
+# ============================================================
+[[lesson]]
+id = "ch2-doubles"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "4 + 4"
+
+[[lesson.step.beat]]
+text = "Two pouches, both with 4 coins. Twins!"
+show = "pouches"
+left = 4
+right = 4
+
+[[lesson.step.beat]]
+text = "Adding twins is called a double. $4 + 4 = 8$."
+formal = "Summing a number and the same number is called a double: $4 + 4 = 8$."
+show = "pouches"
+left = 4
+right = 4
+join = true
+total = 8
+
+[[problem_set]]
+id = "ch2-doubles-set"
+stage = "abstract"
+look = "both"
+pattern = "doubles"
+problems = ["1 + 1", "2 + 2", "3 + 3", "4 + 4", "5 + 5"]
+question = "Look at the answers. What do you notice?"
+notice = "Did you see? The doubles climb by 2: 2, 4, 6, 8, 10."
+formal_notice = "Each double is 2 more than the last: $2, 4, 6, 8, 10$."
+
+# ============================================================
+# Word problems (the builder's world). Keep a + b <= 10.
+# ============================================================
+[[word_problem]]
+id = "ch2-stones"
+stage = "pictorial"
+look = "both"
+text = "The builder has 4 stones. A helper brings 3 more. How many stones in all?"
+formal = "The builder has 4 stones and receives 3 more. Find $4 + 3$."
+a = 4
+b = 3
+
+[[word_problem]]
+id = "ch2-stairs"
+stage = "number-line"
+look = "both"
+text = "The builder climbs 2 steps, then 6 more. How many steps in all?"
+formal = "Climb 2 steps, then 6. Find $2 + 6$."
+a = 2
+b = 6
+
+[[word_problem]]
+id = "ch2-empty-cart"
+stage = "abstract"
+look = "both"
+text = "The cart has 5 stones. The helper brings 0 more. How many now?"
+formal = "5 stones, and 0 more arrive. Find $5 + 0$."
+a = 5
+b = 0
+
+# ============================================================
+# Hints. Only these mistakes can happen in chapter 2.
+# ============================================================
+[[hint]]
+id = "ch2-hint-off-by-one-pouches"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Count coins in the first pouch. Then count on for each coin in the second pouch."
+formal = "Start from the first addend and count on."
+
+[[hint]]
+id = "ch2-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand on the first addend. Count only the hops."
+
+[[hint]]
+id = "ch2-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Start with the bigger number. Count on the smaller one. They are the same because of commutativity."
+formal = "Use commutativity: start from the larger addend and count on."
+
+[[hint]]
+id = "ch2-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "Look at the sign. $+$ means we join the groups."
+formal = "The sign is $+$: the sum is at least as big as each addend."
+
+[[hint]]
+id = "ch2-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Take your time. Spill the bigger pouch first. How many coins are there? Then count on the coins from the other pouch, one by one."
+formal = "Slow down. Which addend is bigger? Add the rest on."
+
+# ============================================================
+# Praise. `when` is optional: fast, adds-1, adds-2, set-end, streak, recovered.
+# ============================================================
+[[praise]]
+id = "ch2-praise-1"
+text = "You started from the bigger number. Smart!"
+formal = "Larger addend first. Efficient."
+when = "fast"
+
+[[praise]]
+id = "ch2-praise-2"
+text = "You found the sum!"
+formal = "Correct sum."
+
+[[praise]]
+id = "ch2-praise-3"
+text = "You fixed it. That is what mathematicians do."
+when = "recovered"
+
+[[praise]]
+id = "ch2-praise-4"
+text = "The builder thanks you for helping him manage his money!"
+when = "streak"
+
+[[praise]]
+id = "ch2-praise-5"
+text = "You saw the rule before Ada said it."
+formal = "You found the rule before Ada stated it."
+when = "set-end"

@@ -1,0 +1,57 @@
+# Template for a chapter file: copy to `content/NN-name.toml` and fill in.
+# Every entry needs a unique `id`. `skill` at the top names the chapter; the
+# loader checks every problem below against that skill's promise. `look` is
+# gentle, exceptional, or both (default both). Delete the kinds you don't need.
+
+skill = "skill-id-here"
+title = "Chapter Title"
+
+# The opening lesson: Ada walks ONE example through the three stages.
+[[lesson]]
+id = "chX-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+text = "Ada's line with the counters."
+example = "3 + 1"
+
+[[lesson.step]]
+stage = "number-line"
+text = "Ada's line on the number line."
+example = "3 + 1"
+
+[[lesson.step]]
+stage = "abstract"
+text = "Ada's line with the bare equation. Name each word once."
+example = "3 + 1"
+
+# An ordered run following one pattern, ending with Ada's notice.
+[[problem_set]]
+id = "chX-pattern-name"
+stage = "abstract"
+look = "both"
+pattern = "successor"
+problems = ["1 + 1", "2 + 1", "3 + 1"]
+notice = "Did you see? ... That is the *word*."
+
+# A story sum: {a} and {b} are filled in from the given numbers.
+[[word_problem]]
+id = "chX-slug"
+stage = "pictorial"
+look = "both"
+text = "{a} ducks sit by the pond. {b} more waddles up. How many now?"
+a = 3
+b = 1
+
+# One hint per mistake kind the chapter can produce.
+[[hint]]
+id = "chX-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Short pointer back to the idea, not the answer."
+
+# Short praise for right answers.
+[[praise]]
+id = "chX-praise-1"
+text = "Clean reasoning."

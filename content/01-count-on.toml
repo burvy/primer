@@ -1,0 +1,306 @@
+# Chapter 1: Count on within 5. Sums stay at or under 5.
+# Words: successor (the next number), function (a +1 machine).
+
+skill = "count-on-within-5"
+title = "The Next Number"
+
+[[lesson]]
+id = "ch1-lesson"
+look = "both"
+
+# Step 1: the tower (pictures)
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "A tower has 3 steps."
+show = "tower"
+count = 3
+
+[[lesson.step.beat]]
+text = "The builder adds 1 more."
+show = "tower"
+count = 3
+adding = 1
+
+[[lesson.step.beat]]
+text = "Now there are 4 steps: the next number after 3."
+show = "tower"
+count = 4
+
+# Step 2: again, to show it always works
+[[lesson.step]]
+stage = "pictorial"
+example = "4 + 1"
+
+[[lesson.step.beat]]
+text = "The tower has 4 steps."
+show = "tower"
+count = 4
+
+[[lesson.step.beat]]
+text = "The builder adds another step."
+show = "tower"
+count = 4
+adding = 1
+
+[[lesson.step.beat]]
+text = "There are now 5 steps. One more is always the next number."
+show = "tower"
+count = 5
+
+# Step 3: the number line
+[[lesson.step]]
+stage = "number-line"
+example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "Stand on 3."
+show = "number-line"
+at = 3
+
+[[lesson.step.beat]]
+text = "Hop forward one step. You land on 4."
+show = "number-line"
+at = 3
+hop = 1
+
+# Step 4: the word
+[[lesson.step]]
+stage = "abstract"
+example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "$3 + 1$ is the same as $4$."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "We write it like this: $3 + 1 = 4$."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "The next number has a name: 4 is the successor of 3."
+formal = "4 is the successor of 3. Mathematicians write $S(3) = 4$."
+show = "equation"
+highlight = "answer"
+
+# Step 5: the machine (closed, then opened)
+[[lesson.step]]
+stage = "abstract"
+example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "Here is a machine. Let's feed it a number."
+show = "machine"
+
+[[lesson.step.beat]]
+text = "Put in 3, out comes 4."
+show = "machine"
+input = 3
+output = 4
+
+[[lesson.step.beat]]
+text = "Put in 4, out comes 5. Can you guess what it does?"
+show = "machine"
+input = 4
+output = 5
+
+[[lesson.step.beat]]
+text = "Let's look inside. It adds one more!"
+show = "machine"
+input = 3
+output = 4
+open = true
+
+[[lesson.step.beat]]
+text = "What goes in is the input."
+show = "machine"
+highlight = "input"
+
+[[lesson.step.beat]]
+text = "What comes out is the output."
+show = "machine"
+highlight = "output"
+
+[[lesson.step.beat]]
+text = "A machine like this is called a function."
+formal = "A machine like this is a function. We name it f and write $f(3) = 4$."
+show = "machine"
+label = "+1"
+
+# Successor walk: the first addend climbs, so each sum is the next successor.
+[[problem_set]]
+id = "ch1-successor-walk"
+stage = "pictorial"
+look = "both"
+pattern = "successor"
+problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1", "4 + 1"]
+question = "What do you notice about the answers?"
+notice = "Did you see? Each answer was the successor of the one before: $1, 2, 3, 4, 5$."
+formal_notice = "Each answer is the successor of the one before: $S(0) = 1$, $S(1) = 2$, $S(2) = 3$, $S(3) = 4$, $S(4) = 5$."
+
+# Mini-lesson: two machines joined (composition). Comes before the count-on-two set.
+[[lesson]]
+id = "ch1-two-machines"
+look = "both"
+
+[[lesson.step]]
+stage = "abstract"
+example = "3 + 2"
+
+[[lesson.step.beat]]
+text = "Here are two +1 machines."
+formal = "Here are two successor machines, both named $S$."
+show = "machines"
+count = 2
+
+[[lesson.step.beat]]
+text = "Put 3 into the first. Out comes 4."
+formal = "Feed 3 to the first: $S(3) = 4$."
+show = "machines"
+count = 2
+input = 3
+output = 4
+
+[[lesson.step.beat]]
+text = "The 4 rolls straight into the second machine. Out comes 5."
+formal = "Its output becomes the next input: $S(4) = 5$."
+show = "machines"
+count = 2
+input = 4
+output = 5
+
+[[lesson.step.beat]]
+text = "Two +1 machines, joined together, make a +2 machine."
+formal = "Joining machines is called composition. Two successors make $+2$: $S(S(3)) = 5$."
+show = "machines"
+count = 2
+label = "+2"
+
+# Count on by two: 3 + 2 is the successor of the successor of 3.
+[[problem_set]]
+id = "ch1-count-on-two"
+stage = "number-line"
+look = "both"
+pattern = "successor"
+problems = ["1 + 2", "2 + 2", "3 + 2"]
+notice = "Did you see? Adding 2 is two hops: two successor steps."
+formal_notice = "Adding 2 is calling successor twice: $3 + 2 = S(S(3))$."
+
+# Plus 2 lands one past plus 1.
+[[problem_set]]
+id = "ch1-one-past"
+stage = "abstract"
+look = "both"
+pattern = "successor"
+problems = ["3 + 1", "3 + 2", "2 + 1", "2 + 2"]
+question = "Look at $3 + 1$ and $3 + 2$. What do you notice?"
+notice = "Did you see? Adding 2 lands one step past adding 1."
+formal_notice = "$3 + 2$ is the successor of $3 + 1$."
+
+[[word_problem]]
+id = "ch1-tower2"
+stage = "pictorial"
+look = "both"
+text = "The builder has 3 stones. A helper brings 1 more. How many stones now?"
+formal = "The builder has 3 stones. One more arrives. Find $3 + 1$."
+a = 3
+b = 1
+
+[[word_problem]]
+id = "ch1-tower3"
+stage = "number-line"
+look = "both"
+text = "The builder placed 3 stones. He places 2 more. How many stones now?"
+formal = "The builder placed 3 stones. He places 2 more. Find $3 + 2$."
+a = 3
+b = 2
+
+# Hints: point at the method, never give the answer
+
+[[hint]]
+id = "ch1-hint-off-by-one-tower"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Count the steps already there. Then count the one new step."
+formal = "Count the steps first. Adding 1 means the very next number."
+
+[[hint]]
+id = "ch1-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand ON the first number, then hop. Count only the hops."
+formal = "Start on the first number. Each hop is one successor step. Count only each step."
+
+[[hint]]
+id = "ch1-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Say the first number. Then say the next number. Do this once for each time you add one."
+formal = "Find the successor of the first number. For $+2$, find the successor of the successor."
+
+[[hint]]
+id = "ch1-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "Look at the sign. $+$ means the tower grows."
+formal = "The sign is $+$: the answer must be bigger than where you started."
+
+[[hint]]
+id = "ch1-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Take your time. Picture the tower steps, then add the new step."
+formal = "Slow down. Which number comes next?"
+
+# ---- Praise: praise the thinking, not the child ----
+
+[[praise]]
+id = "ch1-praise-1"
+text = "You just knew it! Counting on in your head."
+when = "fast"
+
+[[praise]]
+id = "ch1-praise-2"
+text = "Great job, not counting from one!"
+when = "fast"
+
+[[praise]]
+id = "ch1-praise-3"
+text = "That's the successor!"
+formal = "Correct: the successor."
+when = "adds-1"
+
+[[praise]]
+id = "ch1-praise-4"
+text = "Two hops, two steps. Well done!"
+formal = "Two steps of successor. Exactly."
+when = "adds-2"
+
+[[praise]]
+id = "ch1-praise-5"
+text = "The builder would be proud."
+when = "streak"
+
+[[praise]]
+id = "ch1-praise-6"
+text = "Great recovery!"
+formal = "Good recovery."
+when = "recovered"
+
+[[praise]]
+id = "ch1-praise-7"
+text = "You spotted the pattern."
+formal = "You found the pattern before Ada told you."
+when = "set-end"
+
+[[praise]]
+id = "ch1-praise-8"
+text = "Correct!"
+formal = "Correct."
+
+[[praise]]
+id = "ch1-praise-9"
+text = "That's right!"
+formal = "Right."
