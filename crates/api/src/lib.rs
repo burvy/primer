@@ -24,8 +24,9 @@ pub struct ProblemDto {
 /// `show` names the picture (`"machine"`, `"machines"`, `"tower"`,
 /// `"number-line"`, `"equation"`, `"counters"` or `"pouches"`). The other fields are small
 /// settings for that picture; a picture ignores the ones it does not use.
-/// `formal` replaces `text` in the Exceptional look. `$...$` in either marks
-/// maths (LaTeX).
+/// `formal` replaces `text` in the Exceptional look. `text` and `formal` are
+/// HTML made by the server: the words are escaped and each `$...$` of LaTeX
+/// is already MathML, so the browser only has to insert them.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BeatDto {
     pub text: String,
@@ -52,6 +53,8 @@ pub struct BeatDto {
     pub swap: Option<bool>,
     /// Write this total above the pouches.
     pub total: Option<u32>,
+    /// A hand-drawn picture to show, by file name under `assets/`.
+    pub image: Option<String>,
 }
 
 /// What the child sees next. `#[serde(tag = "type")]` writes the variant name

@@ -22,12 +22,12 @@ use axum::{Json, Router};
 use primer_api::{
     AnswerRequest, AnswerResponse, LessonSeenRequest, LookRequest, PageDto, ProblemDto,
 };
-use primer_core::policy::{self, Chapter};
+use primer_core::policy;
 use primer_core::{Attempt, Event, Learner, Outcome, Page, Problem, Strategy, detect};
 use sqlx::SqlitePool;
 use tower_http::services::ServeDir;
 
-use crate::content;
+use crate::content::Content;
 use crate::db;
 use crate::judge::SharedJudge;
 use crate::names::{BLANKS, LOOKS, MISTAKES, OPS, STAGES, name, parse};
@@ -38,7 +38,8 @@ use crate::names::{BLANKS, LOOKS, MISTAKES, OPS, STAGES, name, parse};
 pub struct AppState {
     pub pool: SqlitePool,
     pub judge: SharedJudge,
-    pub chapters: Arc<Vec<Chapter>>,
+    /// The checked book, loaded once at start.
+    pub content: Arc<Content>,
 }
 
 /// The whole app: the API under `/api`, and the built web app (`dist`)
@@ -100,7 +101,7 @@ async fn current(state: &AppState, id: &str) -> Result<Current, ApiError> {
         .ok_or(ApiError::NotFound)?;
     let events = db::events(&state.pool, id).await?;
     let learner = Learner::from_events(&events);
-    let page = policy::next(&learner, &state.chapters, child.look, child.seed);
+    let page = policy::next(&learner, state.content.chapters(child.look), child.look, child.seed);
     Ok(Current {
         look: child.look,
         seed: child.seed,
@@ -115,7 +116,7 @@ async fn next_page(
     Path(id): Path<String>,
 ) -> Result<Json<PageDto>, ApiError> {
     let now = current(&state, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content)))
 }
 
 /// `POST /api/child/{id}/answer`: check an answer, remember it, reply with
@@ -166,14 +167,14 @@ async fn answer(
 
     // Fold the new event into the learner we already have; no second query.
     let learner = now.learner.apply(&event);
-    let next = policy::next(&learner, &state.chapters, now.look, now.seed);
+    let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
     Ok(Json(AnswerResponse {
         correct: outcome == Outcome::Correct,
         mistake: match outcome {
             Outcome::Wrong(kind) => Some(name(MISTAKES, kind).to_string()),
             _ => None,
         },
-        next: page_dto(&next, &learner),
+        next: page_dto(&next, &learner, &state.content),
     }))
 }
 
@@ -197,8 +198,8 @@ async fn lesson_seen(
     };
     db::append(&state.pool, &id, &event).await?;
     let learner = now.learner.apply(&event);
-    let next = policy::next(&learner, &state.chapters, now.look, now.seed);
-    Ok(Json(page_dto(&next, &learner)))
+    let next = policy::next(&learner, state.content.chapters(now.look), now.look, now.seed);
+    Ok(Json(page_dto(&next, &learner, &state.content)))
 }
 
 /// `POST /api/child/{id}/look`: switch looks, then reply with the next page
@@ -214,7 +215,7 @@ async fn set_look(
         .ok_or(ApiError::NotFound)?;
     db::set_look(&state.pool, &id, look).await?;
     let now = current(&state, &id).await?;
-    Ok(Json(page_dto(&now.page, &now.learner)))
+    Ok(Json(page_dto(&now.page, &now.learner, &state.content)))
 }
 
 /// Names one problem of one set: the set id plus how many are already
@@ -236,7 +237,7 @@ fn problem_dto(problem: &Problem) -> ProblemDto {
 }
 
 /// Core page to JSON page.
-fn page_dto(page: &Page, learner: &Learner) -> PageDto {
+fn page_dto(page: &Page, learner: &Learner, content: &Content) -> PageDto {
     match page {
         Page::Lesson {
             skill,
@@ -246,7 +247,7 @@ fn page_dto(page: &Page, learner: &Learner) -> PageDto {
             skill: skill.to_string(),
             lesson: lesson.clone(),
             again: *again,
-            beats: content::beats(skill, lesson),
+            beats: content.beats(skill, lesson).to_vec(),
         },
         Page::Practice {
             skill,
@@ -272,13 +273,37 @@ fn page_dto(page: &Page, learner: &Learner) -> PageDto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::content;
     use crate::judge::FakeJudge;
     use axum::body::Body;
     use axum::http::{Method, Request};
     use http_body_util::BodyExt;
     use primer_core::Look;
     use tower::ServiceExt;
+
+    /// A tiny book for the tests: chapter 1 with one lesson and one set.
+    fn book() -> Vec<(String, String)> {
+        let chapter = r#"
+skill = "count-on-within-5"
+title = "The Next Number"
+
+[[lesson]]
+id = "intro"
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + 1"
+[[lesson.step.beat]]
+text = "Three blocks make a tower."
+show = "tower"
+count = 3
+
+[[problem_set]]
+id = "walk"
+stage = "pictorial"
+pattern = "successor"
+problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1"]
+"#;
+        vec![("01-count-on.toml".to_string(), chapter.to_string())]
+    }
 
     /// A fresh app on a database file that tests can reopen.
     async fn app(db_file: &std::path::Path) -> Router {
@@ -291,7 +316,7 @@ mod tests {
         let state = AppState {
             pool,
             judge: Arc::new(FakeJudge),
-            chapters: Arc::new(content::chapters()),
+            content: Arc::new(Content::from_sources(&book()).unwrap()),
         };
         router(state, PathBuf::from("no-such-dist"))
     }

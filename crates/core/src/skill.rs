@@ -173,6 +173,8 @@ pub const SKILLS: &[Skill] = &[
             "commutative",
             "doubles",
             "identity",
+            "set",
+            "natural-numbers",
         ],
         patterns: &[
             Pattern::Successor,
@@ -454,8 +456,8 @@ mod tests {
                 }
             }
         }
-        // The ladder must teach every word in the design table: 22 ids, plus `identity`
-        // and `composition` (two machines in a row, chapter 1).
-        assert_eq!(taught_in.len(), 24, "ladder must teach 24 words");
+        // The ladder must teach every word in the design table: 22 ids, plus `identity`,
+        // `composition` (two machines in a row, chapter 1), `set` and `natural-numbers`.
+        assert_eq!(taught_in.len(), 26, "ladder must teach 26 words");
     }
 }
