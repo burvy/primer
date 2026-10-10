@@ -15,7 +15,9 @@ use std::fmt;
 
 use primer_core::{Blank, Op, Problem, SKILLS, Skill};
 
-use super::schema::{ChapterFile, MistakeTag, StageTag, Word, WordProblem, WordsFile};
+use super::schema::{
+    ChapterFile, HeroNamesFile, MistakeTag, StageTag, Word, WordProblem, WordsFile,
+};
 
 /// One thing wrong in one file. `id` is the entry's id, or empty when the
 /// whole file is the problem.
@@ -174,6 +176,23 @@ pub fn check_words(file: &str, words: &WordsFile) -> Vec<ContentError> {
     errors
 }
 
+/// The checks on `hero_names.toml`: no name may be empty or repeat. The
+/// writer's names are always accepted as they stand ("al-Khwarizmi" and
+/// "Liu Hui" are fine); the one-word-of-letters rule is for typed names only.
+pub fn check_hero_names(file: &str, hero_names: &HeroNamesFile) -> Vec<ContentError> {
+    let mut errors = Vec::new();
+    let mut seen = HashSet::new();
+    for name in &hero_names.names {
+        if name.trim().is_empty() {
+            errors.push(ContentError::new(file, name, "a name cannot be empty"));
+        }
+        if !seen.insert(name) {
+            errors.push(ContentError::new(file, name, "this name is listed twice"));
+        }
+    }
+    errors
+}
+
 /// What is not written yet, one line per gap. Nothing here is an error.
 ///
 /// For every skill on the ladder: is there a chapter file, a lesson, a
@@ -276,6 +295,24 @@ mod tests {
         let skill = Skill::find("add-within-10").unwrap();
         assert!(pattern_for(skill, "swap").is_ok());
         assert!(pattern_for(skill, "bridge").is_err());
+    }
+
+    #[test]
+    fn hero_names_may_be_anything_but_empty_or_repeated() {
+        let file = |names: &[&str]| HeroNamesFile {
+            names: names.iter().map(|n| n.to_string()).collect(),
+        };
+        let fine = file(&["Lovelace", "al-Khwarizmi", "Liu Hui", "Abcdefghijklmnop"]);
+        assert!(check_hero_names("h.toml", &fine).is_empty());
+        let errors = check_hero_names("h.toml", &file(&["Noether", "Noether", " "]));
+        let said: Vec<String> = errors.iter().map(ToString::to_string).collect();
+        assert_eq!(
+            said,
+            [
+                "h.toml: Noether: this name is listed twice",
+                "h.toml:  : a name cannot be empty",
+            ]
+        );
     }
 
     #[test]

@@ -5,12 +5,15 @@
 //! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes) and
 //! `PRIMER_CONTENT` (content, the folder of chapter files) and `PRIMER_ASSETS`
 //! (assets, the folder of drawings, recordings and sounds).
+//! `PRIMER_GOOGLE_CLIENT_ID` (none: local dev sign-in instead of Google's).
 //! `PRIMER_JEV_KEY_FILE` (jev-key.env) names the Jev key file; with no such
 //! file the server uses the fake judge.
 //!
 //! `primer-server voices` does not start the server: it makes placeholder
 //! recordings and writes `assets/voice/RECORDINGS.md` (see `voices.rs`).
 
+mod auth;
+mod children;
 mod config;
 mod content;
 mod db;
@@ -52,10 +55,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = db::connect(&database).await?;
 
-    // With `dev-local` there is no sign-in yet, so one built-in child exists.
-    #[cfg(feature = "dev-local")]
-    db::ensure_child(&pool, "dev", primer_core::Look::Gentle, 42).await?;
-
     // The real judge only when a key file exists; otherwise the fake one.
     let judge: judge::SharedJudge = match config::JevConfig::from_env() {
         Some(jev) => Arc::new(jev::JevJudge::new(jev)?),
@@ -64,10 +63,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arc::new(judge::FakeJudge)
         }
     };
+    // Parents sign in with Google when a client id is set; without one the
+    // page offers a local sign-in so the prototype still runs.
+    let google_client_id = std::env::var("PRIMER_GOOGLE_CLIENT_ID")
+        .ok()
+        .filter(|id| !id.is_empty());
+    if google_client_id.is_none() {
+        println!("no PRIMER_GOOGLE_CLIENT_ID: parents sign in with the local dev sign-in");
+    }
     let state = AppState {
         pool,
         judge,
         content: Arc::new(content),
+        google_client_id,
+        http: reqwest::Client::new(),
     };
     let app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));
 

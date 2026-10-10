@@ -249,6 +249,14 @@ pub struct Praise {
     pub when: Option<When>,
 }
 
+/// `content/hero_names.toml`: the names a child may pick as their hero.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HeroNamesFile {
+    #[serde(default)]
+    pub names: Vec<String>,
+}
+
 /// `content/words.toml`: the vocabulary.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

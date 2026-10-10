@@ -1,8 +1,10 @@
 //! The database edge: SQLite through `sqlx`.
 //!
-//! Two tables (see `migrations/0001_init.sql`): `children`, and `attempts`, an
-//! append-only log. We never store a `Learner`; we store what happened and
-//! fold it back into a `Learner` when needed, so progress cannot drift.
+//! Tables (see `migrations/`): `parents` and their `sessions`; `children`
+//! (each owned by a parent); and `attempts`, an append-only log. We never
+//! store a `Learner`; we store what happened and fold it back into a
+//! `Learner` when needed, so progress cannot drift. Deleting a parent or a
+//! child deletes everything below it (`ON DELETE CASCADE`).
 //!
 //! `async fn` means the function can pause while the database works, letting
 //! the server handle other requests meanwhile. Callers write `.await` where
@@ -29,26 +31,183 @@ pub async fn connect(url: &str) -> Result<SqlitePool, sqlx::Error> {
     Ok(pool)
 }
 
+/// A parent's id. A *newtype*: a number that cannot be mixed up with any
+/// other number (a child's seed, a count) by accident.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParentId(pub i64);
+
+/// The parent who signed in with this Google account id, made on the first
+/// sign-in. (`ON CONFLICT DO NOTHING` then `SELECT`: two sign-ins at once
+/// cannot make two parents, because `google_sub` is unique.)
+pub async fn parent_for_sub(
+    pool: &SqlitePool,
+    google_sub: &str,
+    now: i64,
+) -> Result<ParentId, sqlx::Error> {
+    sqlx::query("INSERT INTO parents (google_sub, created_at) VALUES (?, ?) ON CONFLICT DO NOTHING")
+        .bind(google_sub)
+        .bind(now)
+        .execute(pool)
+        .await?;
+    let id = sqlx::query_scalar("SELECT id FROM parents WHERE google_sub = ?")
+        .bind(google_sub)
+        .fetch_one(pool)
+        .await?;
+    Ok(ParentId(id))
+}
+
+/// Remembers a sign-in until `expires_at` (seconds since 1970).
+pub async fn create_session(
+    pool: &SqlitePool,
+    token: &str,
+    parent: ParentId,
+    expires_at: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO sessions (token, parent_id, expires_at) VALUES (?, ?, ?)")
+        .bind(token)
+        .bind(parent.0)
+        .bind(expires_at)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Who this token belongs to, if the sign-in has not run out at time `now`.
+pub async fn parent_of_session(
+    pool: &SqlitePool,
+    token: &str,
+    now: i64,
+) -> Result<Option<ParentId>, sqlx::Error> {
+    let id = sqlx::query_scalar("SELECT parent_id FROM sessions WHERE token = ? AND expires_at > ?")
+        .bind(token)
+        .bind(now)
+        .fetch_optional(pool)
+        .await?;
+    Ok(id.map(ParentId))
+}
+
+/// Signs out: forgets this one token.
+pub async fn delete_session(pool: &SqlitePool, token: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM sessions WHERE token = ?")
+        .bind(token)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Deletes the parent and, by cascade, their sessions, children and every
+/// attempt of every child. Nothing is kept.
+pub async fn delete_parent(pool: &SqlitePool, parent: ParentId) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM parents WHERE id = ?")
+        .bind(parent.0)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 /// What the server knows about a child.
 pub struct Child {
     pub look: Look,
     pub seed: u64,
 }
 
-/// Adds a child unless one with this id already exists (`OR IGNORE`).
-pub async fn ensure_child(
+/// A child's profile: no real name, only the hero name they chose.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Profile {
+    pub id: String,
+    pub hero_name: Option<String>,
+    pub age_band: String,
+    pub look: Look,
+}
+
+fn profile(row: &sqlx::sqlite::SqliteRow) -> Profile {
+    Profile {
+        id: row.get("id"),
+        hero_name: row.get("hero_name"),
+        age_band: row.get("age_band"),
+        look: parse(LOOKS, row.get("look")).unwrap_or(Look::Gentle),
+    }
+}
+
+/// Adds a child to `parent`.
+pub async fn create_child(
     pool: &SqlitePool,
+    parent: ParentId,
     id: &str,
     look: Look,
+    age_band: &str,
     seed: u64,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT OR IGNORE INTO children (id, look, seed) VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO children (id, parent_id, look, age_band, seed) VALUES (?, ?, ?, ?, ?)")
         .bind(id)
+        .bind(parent.0)
         .bind(name(LOOKS, look))
+        .bind(age_band)
         .bind(seed as i64)
         .execute(pool)
         .await?;
     Ok(())
+}
+
+/// The parent's children, oldest first.
+pub async fn children_of(pool: &SqlitePool, parent: ParentId) -> Result<Vec<Profile>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT id, hero_name, age_band, look FROM children WHERE parent_id = ? ORDER BY rowid",
+    )
+    .bind(parent.0)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.iter().map(profile).collect())
+}
+
+/// One child's profile, but only if `parent` owns it. A parent asking for
+/// someone else's child gets `None`, the same as for a child who is not there.
+pub async fn owned_child(
+    pool: &SqlitePool,
+    parent: ParentId,
+    id: &str,
+) -> Result<Option<Profile>, sqlx::Error> {
+    let row = sqlx::query(
+        "SELECT id, hero_name, age_band, look FROM children WHERE id = ? AND parent_id = ?",
+    )
+    .bind(id)
+    .bind(parent.0)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.as_ref().map(profile))
+}
+
+/// Remembers the hero name the child chose.
+pub async fn set_hero(pool: &SqlitePool, id: &str, hero_name: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE children SET hero_name = ? WHERE id = ?")
+        .bind(hero_name)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Deletes the child and, by cascade, every attempt of theirs.
+pub async fn delete_child(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM children WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Everything stored about a child's attempts, as JSON, oldest first: for the
+/// parent's export.
+pub async fn export(pool: &SqlitePool, id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    let rows = sqlx::query("SELECT data FROM attempts WHERE child_id = ? ORDER BY id")
+        .bind(id)
+        .fetch_all(pool)
+        .await?;
+    rows.iter()
+        .map(|row| {
+            serde_json::from_str(row.get("data")).map_err(|e| sqlx::Error::Decode(Box::new(e)))
+        })
+        .collect()
 }
 
 /// The child with this id, or `None`. `fetch_optional` gives `Option<Row>`.

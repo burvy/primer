@@ -199,3 +199,52 @@ pub struct LookRequest {
     /// `"gentle"` or `"exceptional"`.
     pub look: String,
 }
+
+/// `GET /api/auth/config`: how the parent may sign in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthConfig {
+    /// The Google client id; the sign-in page shows Google's button when set.
+    pub google_client_id: Option<String>,
+    /// A local sign-in with no Google, for running the prototype. Only on
+    /// when there is no client id.
+    pub dev_sign_in: bool,
+}
+
+/// `POST /api/auth/google`: what Google's button gave the page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GoogleSignIn {
+    pub credential: String,
+}
+
+/// The reply to a sign-in: the secret the page sends with every later call
+/// as `Authorization: Bearer <token>`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionDto {
+    pub token: String,
+}
+
+/// A child's profile. There is no real name anywhere: only the hero name the
+/// child chose (none yet for a new profile).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChildDto {
+    pub id: String,
+    pub hero_name: Option<String>,
+    /// `"5-6"` or `"7-8"`.
+    pub age_band: String,
+    /// `"gentle"` or `"exceptional"`.
+    pub look: String,
+}
+
+/// `POST /api/children`: a new child profile.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NewChild {
+    pub age_band: String,
+    pub look: String,
+}
+
+/// `POST /api/children/{id}/hero`: the hero name the child picked from the
+/// list or typed. The server tells which it was.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HeroRequest {
+    pub name: String,
+}
