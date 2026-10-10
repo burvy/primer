@@ -7,9 +7,8 @@ turns to the right next page. Hosted at `primer.burvy.dev` on the home server.
 
 ## Principles
 
-1. **Pure core, I/O at the edges.** Every decision is plain data plus pure
-   functions: `(state, event) -> new state`. Browser, database, clock, randomness
-   and AI calls live outside the core and hand it data.
+1. **Pure core, I/O at the edges.** Decisions are data plus pure functions,
+   `(state, event) -> new state`; browser, database, randomness and AI are edges.
 2. **Code does the maths; AI does judgment.** TypeSafe's docs say Jev "is not a
    calculator" ([jev-1.13 jagged edges](https://docs.typesafe.ai/model-jaggedness/jev-1.13)).
    Every sum, right/wrong check and difficulty step is plain Rust.
@@ -18,12 +17,10 @@ turns to the right next page. Hosted at `primer.burvy.dev` on the home server.
 
 ## Stack: Leptos CSR + Trunk + axum (like burvy-dev)
 
-- **Known already:** same build, deploy, Cloudflare and Google sign-in as `plgroup`.
-- **A book, not a form:** page turns, keypad, sounds and counters need client
-  code; with Leptos it is Rust. Bevy wasm games embed later as in burvy-dev.
-- **FP stays clean:** the pure `core` crate builds for native *and* wasm, is
-  tested with plain `cargo test`, and knows nothing about Leptos or axum.
-- One origin: axum serves the Trunk `dist/` *and* `/api/*`, so no CORS.
+The human already knows it (build, deploy, Cloudflare, Google sign-in); a book
+needs client code (page turns, keypad, sounds), and with Leptos that is Rust; bevy
+games embed later. The pure `core` crate builds for native and wasm and knows
+nothing of Leptos or axum. axum serves `dist/` and `/api/*` from one origin.
 
 ```
 crates/core     PURE: problem, skill ladder, generate, mistake, learner, policy, content checks
@@ -38,13 +35,16 @@ assets/         art, fonts, sounds (placeholders until the human supplies them)
 ## Core data (in words)
 
 - `Problem { a, op, b }`; `Op = Add | Sub` (v1). Invalid problems can't be built.
-- `Skill`: one chapter, e.g. "make ten", "3 + □ = 7". The ladder is data: each
-  skill lists the skills it `requires` and its `track` (only `Core` in v1), so it
-  can branch into tracks later without code changes.
+- `Skill`: one chapter, e.g. "make ten" (`3 + □ = 10`). The ladder is data: each
+  skill lists what it `requires`, its `track` (only `Core` in v1), its `words`
+  (vocabulary ids) and its `patterns` (below), so it can branch into tracks later.
+- `ProblemSet { id, skill, problems, pattern?, notice? }` — an ordered run of
+  problems; written by a human, or built from a `Pattern` by code.
+- `Pattern` — a named shape for a run (successor, swap, doubles, bonds…): data.
 - `Page = Lesson(step) | Practice(Problem) | Story` — what the child sees next.
 - `Stage = Pictorial | NumberLine | Abstract` — how the problem is *shown*.
 - `Look = Gentle | Exceptional` — the child's chosen look and track (below).
-- `Attempt { problem, stage, look, answer, outcome, ms_taken, strategy }` — one event.
+- `Attempt { set_id, problem, stage, look, answer, outcome, ms_taken, strategy }`.
 - `Outcome = Correct | Wrong(MistakeKind) | DontKnow`; `MistakeKind = OffByOne |
   WrongOperation | DigitsSwapped | CarryOrBorrow | Guess | Unknown`.
 - `Learner` = lessons seen + mastery per (skill, stage). **A fold over events:**
@@ -64,52 +64,86 @@ Linear number games improve young children's number sense ([Ramani, Siegler & Hi
 Real objects (concrete) are the grown-up's part; `PLAYTEST.md` suggests some.
 
 **Teach, then practise.** Every skill opens with a short **lesson**: Ada works one
-example through the stages (counters → number line → equation), the child taps
-along. Then come problem sets.
-
+example through the stages, introducing the chapter's words. Then problem sets.
 **Adaptivity (plain code):** 3 right in a row → next stage; abstract mastered →
 next skill; 2 wrong → back one stage plus the hint for that mistake kind; two
 step-backs → offer the lesson again; slow answers, "I don't know" taps or a
 frustration signal → easier page, kind words.
 
 **Feel smart, never babyish.** Real notation in a maths font: `3 + 4 = □`
-(the box is an unknown). **Missing-number problems** (`3 + □ = 7`) are skills of
-their own: early algebra, and most of the Exceptional look's extra work. Real words
-with a gloss: *sum*, *difference*, *equation*. Skills are chapters; a mastered
-skill becomes a signed "theorem" page. No baby talk, no cartoon mascot; the
-narrator speaks to the child as a capable young reader.
+(the box is an unknown). **Missing-number problems** (`3 + □ = 7`) are early
+algebra and most of the Exceptional look's extra work. A mastered skill becomes a
+signed "theorem" page. No baby talk, no mascot; Ada speaks to a capable reader.
+
+## The chapters: words and patterns
+
+Each chapter brings a few **real words**, introduced by Ada in its lesson with a
+plain gloss, then collected in the child's "My words" page. Gentle shows the
+gloss first; Exceptional uses the formal word first. Crossing ten (8 + 5) waits
+for chapter 8.
+
+| # | Chapter | Example | Words (Gentle gloss → formal) | Patterns |
+|---|---|---|---|---|
+| 1 | Count on within 5 | 3 + 1 | the next number → *successor*; +1 machine → *function* | successor |
+| 2 | Add within 10 | 3 + 4 | *sum*, *addend*, *equation*, *equals* ("the same as"); swap rule → *commutative*; *doubles* | successor, swap, doubles |
+| 3 | Missing addend | 3 + □ = 7 | *unknown*; fact family | family |
+| 4 | Make ten (bonds) | 3 + □ = 10 | *number bond*; one up, one down → *compensation* | bond walk |
+| 5 | Subtract within 10 | 7 − 3 | *difference*; the number before → *predecessor*; undo → *inverse* | predecessor, undo |
+| 6 | Add within 20, no carry | 13 + 4 | *ones*, *tens* → *place value* | parallel (3+4, 13+4) |
+| 7 | Subtract within 20, no borrow | 17 − 3 | *pattern* | parallel |
+| 8 | Add within 20, crossing ten | 8 + 5 | bridge through ten; *near doubles* | bridge, near doubles |
+| 9 | Subtract within 20, crossing ten | 13 − 5 | bridge back through ten | bridge back |
+
+A skill's `words` field lists word ids; the text (gloss, formal word, Ada's line)
+is content in `content/words.toml`. Lint checks every id exists, taught once.
+
+## Problem sets: written first, then patterned
+
+**Written first.** Each chapter opens with hand-written, ordered problem sets in
+its content file (drafted by Cline, edited by the human/ractor), for example the
+swap run `3 + 5`, `5 + 3`, `2 + 6`, `6 + 2` with a `notice` line ("Did you see?
+Swapping the addends kept the sum. That is the *commutative* rule."). The policy
+serves them in order.
+
+**Then patterned, never plain random.** When a child has used up the written sets
+(and would start seeing repeats), code builds new sets by walking a `Pattern`:
+
+- *successor*: `3+4, 4+4, 5+4` (the sum goes up by one); *predecessor* likewise.
+- *swap*: `a+b` then `b+a`. *doubles*: `2+2, 3+3, 4+4`. *near doubles*: `6+6` then `6+7`.
+- *family*: `3+4=□, 3+□=7, □+4=7, 7−4=□`. *undo*: `3+4` then `7−4`.
+- *bond walk*: `1+□=10, 2+□=10, 3+□=10…`. *parallel*: `3+4` then `13+4`.
+- *bridge*: `8+2`, then `8+5` ("make ten first"); *bridge back*: `13−3`, then `13−5`.
+
+`pattern::walk(pattern, start, len) -> Vec<Problem>` is pure; randomness only
+picks the pattern (from the skill's list) and the starting numbers, and every
+problem must still pass `skill.allows`. A generated set ends with the pattern's
+`notice` line (human-written, one per pattern), naming the idea just used.
 
 ## The story and the two looks
 
 **Story:** a fairy-tale journey mirroring the Primer: a young hero, companions,
 castles and a logic castle whose doors open by reasoning (in the spirit of Castle
-Turing). Names and places are our own, not Stephenson's.
+Turing). Names and places are our own, not Stephenson's. **The hero is the
+child:** pick a fairy-tale name from a list or type one; a typed name must pass a
+code rule (one word, letters only, ≤12) and a Jev Noul ("a real person's name or
+identifying detail?"), else the list returns. **The narrator is Ada** (for Ada
+Lovelace), a *ractor*-style voice like Miranda in *The Diamond Age*.
 
-**The hero is the child,** as Nell is in the Primer. The child names the hero:
-pick from a list of fairy-tale names, or type one. A typed name must pass a code
-rule (one word, letters only, ≤12) and a Jev Noul ("does this look like a real
-person's name or other identifying detail?"); if it fails, the list is offered.
-
-**The narrator is Ada** (a nod to Ada Lovelace), a *ractor*-style voice like
-Miranda in *The Diamond Age*: the human author behind the book.
-
-**Two looks, one app.** A look is a CSS theme (`data-look` on `<html>`, CSS
-variables) **plus** a `Look` value the policy reads. Switch any time; progress is
-shared. The human named them **Gentle** and **Exceptional**.
-- *Gentle* (storybook style): warm illustrated pages, ink and watercolour, CPA at normal pace.
-- *Exceptional* (treatise style): a Victorian mathematical treatise in the manner of Oliver Byrne's
-  1847 coloured *Euclid*: cream paper, red/yellow/blue shapes, serif type,
-  "Proposition" headings. Harder track: fewer pictorial pages, missing-number
-  forms (`□ + 4 = 7`), column form sooner, and "How did you know?" questions.
-  Chapters finished here earn a "Proved Exceptional" seal worth bragging about.
+**Two looks, one app:** a CSS theme (`data-look` + CSS variables) plus a `Look`
+value the policy reads. Switch any time; progress is shared.
+- *Gentle* (storybook): warm illustrated pages, ink and watercolour, normal pace.
+- *Exceptional* (treatise, after Oliver Byrne's 1847 coloured *Euclid*): cream
+  paper, red/yellow/blue shapes, "Proposition" headings, formal words first.
+  Harder: fewer pictorial pages, more missing-number forms, "How did you know?"
+  questions, and a "Proved Exceptional" seal worth bragging about.
 
 ## Request flow: child answers
 
-1. `GET /api/child/{id}/next` → page (problem, stage, text ids). Child taps the
-   keypad (digits, ⌫, "I don't know"), then `POST .../answer { page_id, answer, ms_taken, explanation? }`.
+1. `GET /api/child/{id}/next` → page. Child taps the keypad (digits, ⌫, "I don't
+   know"), then `POST .../answer { page_id, answer, ms_taken, explanation? }`.
 2. **Pure:** check; if wrong, `mistake::detect`. **Edge, only if needed:** one Jev
-   call (below); right answers with no explanation call no AI.
-3. Store the `Attempt`, fold it into the `Learner`, `policy::next`, reply; page turns.
+   call; right answers with no explanation call no AI.
+3. Store the `Attempt`, fold it into the `Learner`, `policy::next`, reply.
 
 ## Jev at runtime: the adaptive AI
 
@@ -118,92 +152,71 @@ One `POST https://api.typesafe.ai/v1/systemone` (`Authorization: Bearer`, body
 [primitives](https://docs.typesafe.ai/primitives)); serde + reqwest, no SDK; all
 questions in one request ([fan-out](https://docs.typesafe.ai/patterns/fan-out)).
 - **Mistake kind** when code finds no signature: Choice over `MistakeKind`, with
-  code-computed facts in `state` (difference, digits), so Jev does no maths.
-- **Reading the child's explanation** ("How did you know?", typed, Exceptional look
-  or older kids): Choice over strategies (counted all, counted on, made ten,
-  doubles, just knew, unclear). The policy uses it: "counted all" at age 7 →
-  more make-ten pages. Gentle-look kids tap a picture card instead; no AI.
-- **Frustration:** Noul on the explanation text ("does this child sound upset or
-  stuck?"), combined in code with timing and "I don't know" taps.
-- Low `confidence` → `Unknown` ([confidence routing](https://docs.typesafe.ai/patterns/confidence-routing)).
-  The safe option goes first, since Jev leans toward the first Choice option.
-- Jev down or no key → `Unknown`; the tutor still works (a fake proves it).
+  code-computed facts in `state`, so Jev does no maths.
+- **Strategy** from the typed "How did you know?" (Exceptional or older kids):
+  Choice (counted all, counted on, made ten, doubles, just knew, unclear); e.g.
+  "counted all" at age 7 → more bond sets. Gentle kids tap a picture card; no AI.
+- **Frustration:** Noul on the explanation, combined in code with timing and
+  "I don't know" taps.
+- Low `confidence` → `Unknown` ([confidence routing](https://docs.typesafe.ai/patterns/confidence-routing));
+  safe option first (Jev leans to the first Choice). Jev down → `Unknown`.
 
 ## Content: written by a human, checked by machine
 
 All text lives in `content/` as **TOML**, one file per chapter
-(`content/03-making-ten.toml`): plain text, readable diffs, parsed by `serde`.
-Entries: id, skill, stage, look (`both` default), kind (`lesson`, `word_problem`,
-`hint`, `praise`, `story`), text. A `lesson` is ordered steps (stage, Ada's line,
-worked example). Word problems use `{a}`/`{b}` slots that code fills.
-`docs/WRITERS_GUIDE.md` says what each chapter needs (a lesson, a few word
-problems per stage, a hint per mistake kind), reading level, tone, word limits.
+(`content/04-make-ten.toml`), parsed by `serde`. Entry kinds: `lesson` (ordered
+steps: stage, Ada's line, worked example), `problem_set` (ordered problems such
+as `"3 + 5"` or `"3 + □ = 10"`, optional pattern tag and `notice`),
+`word_problem` (`{a}`/`{b}` slots), `hint`, `praise`, `story`. Each has id, skill,
+stage and look (`both` default). `docs/WRITERS_GUIDE.md` says what a chapter
+needs, reading level, tone and word limits.
 
-**`primer-lint`** gives the writer feedback:
-- *Code checks (pure, in `core`):* file parses, ids unique, slots valid, no stray
-  digits, word limit, every (skill, stage, mistake kind) has a hint (coverage).
-- *Jev lint:* reading level (Score, ages 5/6/7/8+), gives the answer away (Noul),
-  kid-safe (Noul), operation matches skill (Choice); cached by text hash.
-- The server runs the code checks at start and refuses broken content.
-
+**`primer-lint`:** *code checks* (parses, ids unique, slots valid, no stray digits,
+word limits, problems keep the skill's promise, coverage of lessons, hints and
+words) and *Jev lint* (reading level Score, answer given away Noul, kid-safe Noul,
+operation Choice; cached by text hash). The server refuses broken content.
 *Later:* `primer-lint draft` (a strong model drafts, the human rewrites);
 generated text for children may return at scale, gated by the same lint.
 
 **Keys stay server-side.** `jev-key.env` (gitignored; `PRIMER_KEY_DIR` on the
-server) holds only the raw key, read and trimmed into `secrecy::SecretString`.
-Only `jev.rs` uses it; the browser talks only to `/api`.
+server) holds only the raw key, trimmed into `secrecy::SecretString`. Only
+`jev.rs` uses it; the browser talks only to `/api`.
 
 ## Privacy: plan for COPPA now
 
 COPPA is the US Children's Online Privacy Protection Act.
-- **Parent owns everything.** Google sign-in as in `plgroup` (`tokeninfo`, random
-  session token, `Bearer`). Children have no login, email or password.
-- **Child profile:** hero name (from the list, or checked as above), age band,
-  look. No real names anywhere. Jev sees a typed hero name once, to check it.
-- **Minimal data:** attempts (problem, answer, outcome, time, strategy label).
-  Explanations go to Jev, then are **dropped**; only the label is kept.
-- **Delete on request:** delete a child (attempts cascade) or the whole account;
-  hard delete. JSON export too. Leaving child mode needs a grown-up check.
-- **SQLite** (sqlx, static SQL): `parents`, `sessions`, `children`, `attempts`
-  (the event log); content is files. DB in `C:\burvy\data\primer\`, backed up.
-- Fonts and assets self-hosted: no third-party calls from a child's device.
-- A privacy page lists what's kept and the one processor (TypeSafe). The human
-  should confirm TypeSafe's data terms and the current FTC rule (not legal advice).
+- **Parent owns everything:** Google sign-in as in `plgroup`; children have no
+  login. Child profile = hero name, age band, look. No real names anywhere.
+- **Minimal data:** attempts only. Explanations go to Jev, then are **dropped**;
+  only the strategy label is kept.
+- **Delete on request** (child or account, hard delete, attempts cascade), JSON
+  export, grown-up check to leave child mode, self-hosted fonts and assets.
+- **SQLite** (sqlx, static SQL): `parents`, `sessions`, `children`, `attempts`;
+  DB in `C:\burvy\data\primer\`, backed up. Content is files, not rows.
+- A privacy page names the one processor (TypeSafe). The human should confirm
+  TypeSafe's terms and the current FTC rule (not legal advice).
 
 ## Art and assets
 
-Placeholders now, a row per file in `assets/MANIFEST.md` (name, size, format,
-look, who makes it, status). CSS variables hold colours, fonts and textures, so
-real art is a drop-in file swap.
-
-| Asset | Placeholder | Human could make or pick |
-|---|---|---|
-| Paper textures: Gentle (warm), Exceptional (cream) | flat colour + CSS shading | scan or photograph paper |
-| Ada, the narrator: portrait, small vignette | silhouette SVG | draw her look |
-| The hero (name-neutral), companions, castles, logic castle | grey outline SVG | draw the cast and places |
-| Byrne-style figures, drop caps, ornaments, seals | CSS/SVG, plain letters | draw, refine palette |
-| Manipulatives: ten frame, counters, number line | drawn in code as SVG | style per look |
-| Fonts: Gentle serif, Exceptional serif, maths | system serif | pick, e.g. Andika (early readers), STIX Two Math |
-| Sounds; later Ada's recorded voice | silence | record or pick CC0; mute always |
+Placeholders now; one row per file in `assets/MANIFEST.md`; CSS variables make
+real art a drop-in swap. The human could make or pick: paper textures (warm,
+cream); Ada's portrait; the hero (name-neutral), companions, castles, logic
+castle; Byrne-style figures, drop caps, ornaments, seals; manipulative styling
+(ten frame, counters, number line are SVG in code); fonts (e.g. Andika for early
+readers, STIX Two Math); sounds (CC0 or recorded, always mutable); later Ada's voice.
 
 ## Later (not v1)
 
-**Games:** one single-player bevy wasm mini-game as a chapter reward, embedded
-like burvy-dev's `floret`/`game`. No multiplayer: children must not meet strangers
-online, and networking adds chat and moderation that COPPA makes costly.
-**Tracks ("majors"):** after the core ladder the child may pick a track, each
-with a short "what's in it for you" page: algebra-first, then pure maths, applied
-maths, maybe programming and functional thinking. The ladder's `requires` and
-`track` fields already allow this; v1 ships only `Core`.
-
-Also later: generated text at scale, reading and writing, multiplication,
-a parent progress view, voice.
+**Games:** one single-player bevy wasm reward game, embedded like burvy-dev's
+`floret`; no multiplayer (no strangers for kids; chat and moderation are costly
+under COPPA). **Tracks ("majors"):** after the core ladder, optional tracks with a
+"what's in it for you" page: algebra-first, pure, applied, maybe programming and
+functional thinking; `requires` and `track` already allow it. Also: generated
+text at scale, reading and writing, multiplication, parent progress view, voice.
 
 ## Crates
 
-`axum`, `tokio`, `tower-http` (server, static files, tracing) · `sqlx` sqlite
-(static queries) · `reqwest` rustls (Jev, Google `tokeninfo`) · `serde`,
-`serde_json`, `toml` (JSON and content files) · `secrecy` (unprintable keys) ·
-`rand` (seeded RNG into the pure generator) · `thiserror`, `tracing` (edge errors;
-logs never hold keys or nicknames) · `clap` (lint CLI) · `leptos` csr,
-`leptos_router`, `gloo-net`, `web-sys` (web app, as in burvy-dev).
+`axum`, `tokio`, `tower-http` · `sqlx` sqlite · `reqwest` rustls · `serde`,
+`serde_json`, `toml` · `secrecy` · `rand` (seeded, injected) · `thiserror`,
+`tracing` (never logs keys or names) · `clap` (lint CLI) · `leptos` csr,
+`leptos_router`, `gloo-net`, `web-sys` (as in burvy-dev).
