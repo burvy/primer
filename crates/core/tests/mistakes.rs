@@ -60,6 +60,12 @@ fn kid_mistakes_get_the_right_name() {
         (sum(8, Op::Add, 5), 23, Some(MistakeKind::CarryOrBorrow)),
         (sum(13, Op::Sub, 5), 18, Some(MistakeKind::CarryOrBorrow)),
         (sum(14, Op::Sub, 6), 18, Some(MistakeKind::CarryOrBorrow)),
+        // Smaller from larger: stuck on 3 - 5, the child does 5 - 3 and keeps
+        // the ten. Shares the CarryOrBorrow kind (same root cause).
+        (sum(13, Op::Sub, 5), 12, Some(MistakeKind::CarryOrBorrow)),
+        (sum(14, Op::Sub, 6), 12, Some(MistakeKind::CarryOrBorrow)),
+        (sum(15, Op::Sub, 8), 13, Some(MistakeKind::CarryOrBorrow)),
+        (sum(18, Op::Sub, 9), 11, Some(MistakeKind::CarryOrBorrow)),
         (
             missing(8, Op::Add, 5, Blank::Second),
             15,
