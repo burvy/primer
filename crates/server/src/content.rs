@@ -11,10 +11,10 @@
 //! reads the folder; [`Content::from_sources`] does everything else from
 //! plain text, so tests need no files.
 
-mod check;
+pub mod check;
 mod convert;
 mod math;
-mod schema;
+pub mod schema;
 pub mod voice;
 
 use std::collections::HashMap;

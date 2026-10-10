@@ -89,12 +89,25 @@ const STRATEGIES: &[(Strategy, &str, &str)] = &[
 
 // ---- What we send ----------------------------------------------------------
 
-/// The request body: `{ "model", "state", "questions" }`.
+/// The request body: `{ "model", "state", "questions" }`. Public so that
+/// `primer-lint` can ask its own questions through the same client.
 #[derive(Serialize)]
-struct Request {
+pub struct Request {
     model: &'static str,
     state: Value,
     questions: BTreeMap<&'static str, Question>,
+}
+
+impl Request {
+    /// `state` holds the facts to judge; `questions` maps each question id
+    /// (our own name for it) to the question.
+    pub fn new(state: Value, questions: BTreeMap<&'static str, Question>) -> Request {
+        Request {
+            model: "jev-latest",
+            state,
+            questions,
+        }
+    }
 }
 
 /// One question. `#[serde(tag = "type")]` makes this a *tagged enum*: the
@@ -105,7 +118,7 @@ struct Request {
 /// `"noul"`.
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
-enum Question {
+pub enum Question {
     Noul {
         instructions: &'static str,
         criteria: NoulCriteria,
@@ -115,16 +128,21 @@ enum Question {
         #[serde(serialize_with = "in_order")]
         criteria: Vec<(&'static str, &'static str)>,
     },
+    /// Levels from lowest to highest, 2 to 10 of them.
+    Score {
+        instructions: &'static str,
+        criteria: Vec<&'static str>,
+    },
 }
 
 /// What "true" and "false" mean for a Noul (`true` is a Rust keyword, so the
 /// fields are renamed on the way out).
 #[derive(Serialize)]
-struct NoulCriteria {
+pub struct NoulCriteria {
     #[serde(rename = "true")]
-    yes: &'static str,
+    pub yes: &'static str,
     #[serde(rename = "false")]
-    no: &'static str,
+    pub no: &'static str,
 }
 
 /// Writes `[(option, description)]` as a JSON object *in this order*. A map
@@ -141,8 +159,8 @@ fn in_order<S: Serializer>(
 /// The reply: one answer per question id we sent. Fields we do not use
 /// (`model`, `usage`, `probabilities`) are simply ignored by serde.
 #[derive(Deserialize)]
-struct Response {
-    answers: HashMap<String, Answer>,
+pub struct Response {
+    pub answers: HashMap<String, Answer>,
 }
 
 /// The tagged enum again, now for reading: serde looks at `"type"` first and
@@ -150,9 +168,21 @@ struct Response {
 /// unknown type is a decode error, not a silently wrong answer.
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
-enum Answer {
-    Noul { noul: f64 },
-    Choice { choice: String, confidence: f64 },
+pub enum Answer {
+    Noul {
+        noul: f64,
+    },
+    Choice {
+        choice: String,
+        confidence: f64,
+    },
+    /// `score` is a probability-weighted level, so it can fall between two;
+    /// `legend` maps each level's number (as text) to its description.
+    Score {
+        score: f64,
+        legend: HashMap<String, String>,
+        confidence: f64,
+    },
 }
 
 /// Everything that can go wrong talking to Jev. `thiserror` writes the
@@ -168,16 +198,18 @@ pub enum JevError {
     Decode(#[from] serde_json::Error),
 }
 
-pub struct JevJudge {
+/// The bare connection to Jev: send a request, get a decoded reply.
+/// `JevJudge` uses it for children's answers, `primer-lint` for content.
+pub struct JevClient {
     config: JevConfig,
     http: reqwest::Client,
 }
 
-impl JevJudge {
-    /// One HTTP client for the whole server, with the 2 s timeout built in.
-    pub fn new(config: JevConfig) -> Result<JevJudge, JevError> {
+impl JevClient {
+    /// One HTTP client, reused for every call, with the timeout built in.
+    pub fn new(config: JevConfig) -> Result<JevClient, JevError> {
         let http = reqwest::Client::builder().timeout(config.timeout).build()?;
-        Ok(JevJudge { config, http })
+        Ok(JevClient { config, http })
     }
 
     /// Sends one request and decodes the reply.
@@ -185,7 +217,7 @@ impl JevJudge {
     /// The `?` after each step means "if this failed, return the error now;
     /// otherwise carry on with the value". So the happy path reads top to
     /// bottom, and every failure leaves through the same door.
-    async fn ask(&self, request: &Request) -> Result<Response, JevError> {
+    pub async fn ask(&self, request: &Request) -> Result<Response, JevError> {
         let reply = self
             .http
             .post(&self.config.url)
@@ -201,6 +233,19 @@ impl JevJudge {
     }
 }
 
+/// The server's judge: a `JevClient` plus the questions about one answer.
+pub struct JevJudge {
+    client: JevClient,
+}
+
+impl JevJudge {
+    pub fn new(config: JevConfig) -> Result<JevJudge, JevError> {
+        Ok(JevJudge {
+            client: JevClient::new(config)?,
+        })
+    }
+}
+
 #[async_trait]
 impl Judge for JevJudge {
     async fn judge(
@@ -212,7 +257,7 @@ impl Judge for JevJudge {
         let Some(request) = answer_request(problem, given, explanation) else {
             return Judgment::UNKNOWN;
         };
-        match self.ask(&request).await {
+        match self.client.ask(&request).await {
             Ok(reply) => decode(&reply),
             Err(err) => {
                 // Only the error, never the request: it holds the explanation.
@@ -223,7 +268,7 @@ impl Judge for JevJudge {
     }
 
     async fn identifying(&self, hero_name: &str) -> bool {
-        match self.ask(&name_request(hero_name)).await {
+        match self.client.ask(&name_request(hero_name)).await {
             Ok(reply) => noul(&reply, "identifying").is_none_or(|p| p >= IDENTIFYING_AT),
             Err(err) => {
                 eprintln!("jev: {err}; refusing the typed name");
@@ -283,11 +328,7 @@ fn answer_request(
         "child_answer": given,
         "explanation": explanation,
     });
-    Some(Request {
-        model: "jev-latest",
-        state,
-        questions,
-    })
+    Some(Request::new(state, questions))
 }
 
 fn name_request(hero_name: &str) -> Request {
@@ -300,11 +341,10 @@ fn name_request(hero_name: &str) -> Request {
             no: "A made-up or story name; it identifies no one.",
         },
     };
-    Request {
-        model: "jev-latest",
-        state: json!({ "hero_name": hero_name }),
-        questions: BTreeMap::from([("identifying", question)]),
-    }
+    Request::new(
+        json!({ "hero_name": hero_name }),
+        BTreeMap::from([("identifying", question)]),
+    )
 }
 
 /// Turns a reply into a `Judgment`. Anything missing, unsure or unexpected
@@ -326,7 +366,7 @@ fn decode(reply: &Response) -> Judgment {
 }
 
 /// The chosen option of Choice question `id`, if Jev was confident enough.
-fn choice<'a>(reply: &'a Response, id: &str) -> Option<&'a str> {
+pub fn choice<'a>(reply: &'a Response, id: &str) -> Option<&'a str> {
     match reply.answers.get(id)? {
         Answer::Choice { choice, confidence } if *confidence >= MIN_CONFIDENCE => Some(choice),
         _ => None,
@@ -334,10 +374,30 @@ fn choice<'a>(reply: &'a Response, id: &str) -> Option<&'a str> {
 }
 
 /// The probability from Noul question `id`.
-fn noul(reply: &Response, id: &str) -> Option<f64> {
+pub fn noul(reply: &Response, id: &str) -> Option<f64> {
     match reply.answers.get(id)? {
         Answer::Noul { noul } => Some(*noul),
-        Answer::Choice { .. } => None,
+        _ => None,
+    }
+}
+
+/// Score question `id` as a position from 0 (the first level) up, if Jev was
+/// confident enough. The legend says which number Jev gave the first level,
+/// so this works whether it counts from 0 or from 1.
+pub fn score(reply: &Response, id: &str) -> Option<f64> {
+    match reply.answers.get(id)? {
+        Answer::Score {
+            score,
+            legend,
+            confidence,
+        } if *confidence >= MIN_CONFIDENCE => {
+            let first = legend
+                .keys()
+                .filter_map(|k| k.parse::<f64>().ok())
+                .reduce(f64::min)?;
+            Some(score - first)
+        }
+        _ => None,
     }
 }
 

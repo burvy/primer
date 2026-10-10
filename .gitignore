@@ -5,3 +5,6 @@ jev-key.env
 
 # Placeholder voices are regenerated with: cargo run -p primer-server -- voices
 /assets/voice/placeholder/
+
+# primer-lint remembers Jev verdicts here, by line hash.
+/.lint-cache.json
