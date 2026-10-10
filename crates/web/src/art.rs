@@ -114,8 +114,20 @@ pub fn drawing(path: &str) -> RwSignal<Option<String>> {
 
 #[wasm_bindgen]
 extern "C" {
+    /// Tidies a just-loaded machine drawing: drops the inline `display` and
+    /// `opacity` the drawing program leaves on hidden layers, and wires up the
+    /// block's path from funnel to chute (see `crates/web/art.js`).
+    #[wasm_bindgen(js_namespace = primerArt)]
+    pub fn prepare(container: &web_sys::Element);
+
+    /// Lays the `.machine` children of `holder` out as a staircase, each
+    /// funnel under the chute before it.
+    #[wasm_bindgen(js_namespace = primerArt)]
+    pub fn stairs(holder: &web_sys::Element);
+
     /// Writes `text` centred in the element `box_id` inside `container` (see
-    /// `crates/web/art.js`). With no such element, writes it at (`x`, `y`).
+    /// `crates/web/art.js`). With no such element, writes it in the machine's
+    /// `front-panel`, and failing that at (`x`, `y`).
     #[wasm_bindgen(js_namespace = primerArt, js_name = writeIn)]
     pub fn write_in(container: &web_sys::Element, box_id: &str, text: &str, x: f64, y: f64);
 }

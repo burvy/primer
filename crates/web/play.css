@@ -190,32 +190,20 @@ body {
   border-bottom: none;
 }
 
-/* Two machines joined by a pipe. Machine 2 is offset so the end of machine
- * 1's pipe (at 360,120 of 400x300) lands in machine 2's funnel, whose top runs
- * from x=140 to x=260 at y=40: 210 across and 80 down puts the pipe at the
- * funnel's left side, on a 610x380 sheet. Machine 1 is drawn on top so its
- * whole pipe shows. */
+/* Machines joined in a staircase. `art.js` sets the holder's shape and where
+ * each machine sits (percentages of the holder), from the drawing's funnel
+ * and chute, so a redrawn machine still lines up. */
 .machines {
   position: relative;
   width: 100%;
-  aspect-ratio: 610 / 380;
   margin: var(--gap) auto;
+}
+.machines .machine,
+.machines .machine svg {
+  background: none;
 }
 .machines .machine {
   position: absolute;
-  width: calc(400 / 610 * 100%);
-}
-.machines .machine-1 {
-  left: 0;
-  top: 0;
-  z-index: 1;
-}
-.machines .machine-2 {
-  left: calc(210 / 610 * 100%);
-  top: calc(80 / 380 * 100%);
-}
-.machines .machine-2 #pipe {
-  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -231,7 +219,7 @@ body {
     transition: none;
   }
   /* The block stands still in the funnel and the gear does not turn. */
-  .machine[data-run="true"] #block {
+  .machine[data-run="true"] .block-mover {
     animation: none;
     opacity: 1;
   }
@@ -349,32 +337,31 @@ body {
 /* The machine: a block drops from funnel to chute while the gear turns once.
  * `data-run` is set when the beat puts a number in. In two joined machines
  * the second starts when the first has finished. */
-.machine #block {
+.machine .block-mover {
   opacity: 0;
+  transform: translate(var(--bx0, 0px), var(--by0, 0px));
 }
-.machine[data-run="true"] #block {
+.machine[data-run="true"] .block-mover {
   animation: pass 1400ms ease-in forwards;
+  animation-delay: calc(var(--step, 0) * 1400ms);
 }
 .machine[data-run="true"] #gear {
-  transform-box: view-box;
-  transform-origin: 290px 200px;
+  transform-box: fill-box;
+  transform-origin: center;
   animation: spin 1400ms linear forwards;
-}
-.machines .machine-2[data-run="true"] #block,
-.machines .machine-2[data-run="true"] #gear {
-  animation-delay: 1400ms;
+  animation-delay: calc(var(--step, 0) * 1400ms);
 }
 @keyframes pass {
   from {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(var(--bx0, 0px), var(--by0, 0px));
   }
   80% {
     opacity: 1;
   }
   to {
     opacity: 0;
-    transform: translateY(190px);
+    transform: translate(var(--bx1, 0px), var(--by1, 190px));
   }
 }
 @keyframes spin {

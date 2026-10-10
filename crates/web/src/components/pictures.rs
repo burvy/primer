@@ -368,8 +368,8 @@ fn load_drawing() -> RwSignal<Option<String>> {
     art::drawing("lessons/function-machine.svg")
 }
 
-/// Where the label goes if a drawing has no `label-box`: the middle of the
-/// front panel of the original placeholder.
+/// Where the label goes if a drawing has neither a `label-box` nor a
+/// `front-panel` (the drawing then has no place of its own for it).
 const LABEL_AT: (f64, f64) = (200.0, 140.0);
 
 /// One copy of the machine drawing. `glow`, `open` and `run` are written onto
@@ -392,6 +392,7 @@ fn MachineDrawing(
     // runs again if the drawing arrives later than the page.
     Effect::new(move |_| {
         if let (Some(_), Some(div)) = (drawing.get(), holder.get()) {
+            art::prepare(&div);
             art::write_in(&div, "label-box", &label, LABEL_AT.0, LABEL_AT.1);
         }
     });
@@ -430,13 +431,17 @@ pub fn Machine(
     }
 }
 
-/// Two machines joined by the first one's pipe: what comes out of machine 1
-/// goes into machine 2 (one rule after another, called *composition*).
+/// How many machines `Machines` joins.
+const JOINED: usize = 2;
+
+/// Machines joined in a staircase: what comes out of one machine's chute goes
+/// into the next one's funnel (one rule after another, called *composition*).
 ///
 /// Each machine is labelled `+1`; the beat's `label` (the joined rule, like
-/// `+2`) is written under them. The second copy is placed so the end of the
-/// first copy's pipe lands on its funnel; `play.css` holds the offsets and hides the second copy's own pipe.
-/// The input glow belongs to machine 1 and the output glow to machine 2.
+/// `+2`) is written under them. `art.js` places each copy so its funnel sits
+/// right under the chute before it, from the drawing itself.
+/// The input glow belongs to the first machine and the output glow to the
+/// last.
 #[component]
 pub fn Machines(
     input: Option<u32>,
@@ -447,18 +452,29 @@ pub fn Machines(
 ) -> impl IntoView {
     let drawing = load_drawing();
     let glow = highlight.unwrap_or_default();
-    let (first, second) = match glow.as_str() {
-        "input-glow" => (glow.clone(), String::new()),
-        "output-glow" => (String::new(), glow.clone()),
-        _ => (String::new(), String::new()),
-    };
+    let holder = NodeRef::<leptos::html::Div>::new();
+    // Once the drawings are in the page, lay them out. Runs again if the
+    // drawing arrives later than the page.
+    Effect::new(move |_| {
+        if let (Some(_), Some(div)) = (drawing.get(), holder.get()) {
+            art::stairs(&div);
+        }
+    });
+    let machines = (0..JOINED)
+        .map(|k| {
+            let own_glow = match glow.as_str() {
+                "input-glow" if k == 0 => glow.clone(),
+                "output-glow" if k == JOINED - 1 => glow.clone(),
+                _ => String::new(),
+            };
+            view! {
+                <MachineDrawing drawing glow=own_glow open run=input.is_some()
+                    label="+1".to_string() class="machine" />
+            }
+        })
+        .collect_view();
     view! {
-        <div class="machines">
-            <MachineDrawing drawing glow=first open run=input.is_some()
-                label="+1".to_string() class="machine machine-1" />
-            <MachineDrawing drawing glow=second open run=input.is_some()
-                label="+1".to_string() class="machine machine-2" />
-        </div>
+        <div class="machines" node_ref=holder>{machines}</div>
         <p class="machine-io">{caption(input, output)}</p>
         // The beat's own label is the rule of the two joined: "together: +2".
         {label.map(|rule| view! { <p class="machine-io">{format!("together: {rule}")}</p> })}
