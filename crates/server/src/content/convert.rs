@@ -11,6 +11,7 @@ use primer_core::{ProblemSet, Skill};
 use super::check::{pattern_for, problem_for};
 use super::math::to_html;
 use super::schema::{Beat, Lesson, ProblemSet as SetFile, Show};
+use super::voice::{EXCEPTIONAL, GENTLE, Line, beat_voice, set_name, speakable};
 
 /// All the beats of a lesson, in order, across all its steps.
 ///
@@ -22,7 +23,7 @@ pub fn lesson_beats(skill: &Skill, lesson: &Lesson) -> Result<Vec<BeatDto>, Vec<
     if lesson.step.is_empty() {
         errors.push("a lesson needs at least one step".to_string());
     }
-    for step in &lesson.step {
+    for (step_number, step) in lesson.step.iter().enumerate() {
         // The step's example is checked once, then shared by its beats.
         let example = match step.example.as_deref().map(|e| problem_for(skill, e)) {
             Some(Err(error)) => {
@@ -35,8 +36,10 @@ pub fn lesson_beats(skill: &Skill, lesson: &Lesson) -> Result<Vec<BeatDto>, Vec<
         if step.beat.is_empty() {
             errors.push("a step needs at least one beat".to_string());
         }
-        for beat in &step.beat {
-            match beat_dto(example, beat) {
+        for (beat_number, beat) in step.beat.iter().enumerate() {
+            // Numbers count from 1 in recording names.
+            let place = (lesson.id.as_str(), step_number + 1, beat_number + 1);
+            match beat_dto(example, beat, place) {
                 Ok(dto) => beats.push(dto),
                 Err(error) => errors.push(error),
             }
@@ -49,15 +52,21 @@ pub fn lesson_beats(skill: &Skill, lesson: &Lesson) -> Result<Vec<BeatDto>, Vec<
     }
 }
 
-/// One beat as the web app wants it.
+/// One beat as the web app wants it. `(lesson, step, number)` is where it
+/// sits, which names its recording.
 ///
-/// Three small translations happen on the way:
+/// Four small translations happen on the way:
+/// - The words to read aloud are worked out from the raw text (`voice`).
 /// - `text` and `formal` become HTML, with `$...$` turned into MathML.
 /// - An equation beat with no `label` writes its step's `example` out in
 ///   full, like `3 + 4 = 7`.
 /// - For a `swap` beat the file lists the pouches in their order *after* the
 ///   swap (the picture's order *before* it), so the two are exchanged here.
-fn beat_dto(example: Option<primer_core::Problem>, beat: &Beat) -> Result<BeatDto, String> {
+fn beat_dto(
+    example: Option<primer_core::Problem>,
+    beat: &Beat,
+    (lesson, step, number): (&str, usize, usize),
+) -> Result<BeatDto, String> {
     let html = |text: &str| to_html(text);
     let label = beat.label.clone().or_else(|| match (beat.show, example) {
         (Show::Equation, Some(problem)) => Some(written_out(&problem)),
@@ -86,6 +95,13 @@ fn beat_dto(example: Option<primer_core::Problem>, beat: &Beat) -> Result<BeatDt
         swap: beat.swap,
         total: beat.total,
         image: beat.image.clone(),
+        voice: Some(beat_voice(
+            lesson,
+            step,
+            number,
+            &beat.text,
+            beat.formal.as_deref(),
+        )),
     })
 }
 
@@ -96,6 +112,26 @@ fn written_out(problem: &primer_core::Problem) -> String {
         primer_core::Blank::Answer => format!("{problem} = {}", problem.whole()),
         _ => problem.to_string(),
     }
+}
+
+/// The lines Ada reads aloud for a set: its question and its notice (and the
+/// formal notice for the Exceptional look).
+pub fn set_lines(set: &SetFile) -> Vec<Line> {
+    let line = |part: &str, look: &'static str, text: &String| Line {
+        name: set_name(&set.id, part, look),
+        look,
+        speech: speakable(text),
+    };
+    [
+        set.question.as_ref().map(|t| line("question", GENTLE, t)),
+        set.notice.as_ref().map(|t| line("notice", GENTLE, t)),
+        set.formal_notice
+            .as_ref()
+            .map(|t| line("notice", EXCEPTIONAL, t)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// A written set as the core wants it. Every problem must parse and keep the

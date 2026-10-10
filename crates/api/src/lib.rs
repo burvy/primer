@@ -55,6 +55,48 @@ pub struct BeatDto {
     pub total: Option<u32>,
     /// A hand-drawn picture to show, by file name under `assets/`.
     pub image: Option<String>,
+    /// How Ada reads this beat aloud.
+    pub voice: Option<VoiceDto>,
+}
+
+/// One line Ada can say: the stable `name` of its recording (see
+/// `content/voice.rs` in the server) and the `speech`, the words to read
+/// aloud (`3 plus 4 equals 7`, not LaTeX).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LineDto {
+    pub name: String,
+    pub speech: String,
+}
+
+/// The line for each look. `exceptional` is only there when the beat has its
+/// own `formal` wording; otherwise the Exceptional look reads `gentle`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VoiceDto {
+    pub gentle: LineDto,
+    pub exceptional: Option<LineDto>,
+}
+
+/// Which sounds the child wants. Remembered per child on the server, like
+/// the look, so the choice follows them to another device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AudioSettings {
+    /// Ada reads every line aloud.
+    pub narration: bool,
+    /// Page turns, coins, hops and the chime.
+    pub sounds: bool,
+    /// A quiet tune in the background.
+    pub music: bool,
+}
+
+impl Default for AudioSettings {
+    /// Narration and sounds on, music off.
+    fn default() -> Self {
+        AudioSettings {
+            narration: true,
+            sounds: true,
+            music: false,
+        }
+    }
 }
 
 /// What the child sees next. `#[serde(tag = "type")]` writes the variant name

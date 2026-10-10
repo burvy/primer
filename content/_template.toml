@@ -6,25 +6,43 @@
 skill = "skill-id-here"
 title = "Chapter Title"
 
-# The opening lesson: Ada walks ONE example through the three stages.
+# The opening lesson: Ada walks ONE example through the three stages. Each
+# step has an `example` and one or more `[[lesson.step.beat]]`: one tap, one
+# sentence (`text`, and `formal` for the Exceptional look), one picture (`show`).
+# `show` is tower, pouches, machine, machines, number-line, equation or counters;
+# the other keys (count, adding, at, hop, input, output, highlight, label, open,
+# left, right, join, swap, total) are that picture's settings. `$...$` is maths.
 [[lesson]]
 id = "chX-lesson"
 look = "both"
 
 [[lesson.step]]
 stage = "pictorial"
-text = "Ada's line with the counters."
 example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "Ada's line with the counters."
+show = "tower"
+count = 3
 
 [[lesson.step]]
 stage = "number-line"
-text = "Ada's line on the number line."
 example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "Ada's line on the number line."
+show = "number-line"
+at = 3
+hop = 1
 
 [[lesson.step]]
 stage = "abstract"
-text = "Ada's line with the bare equation. Name each word once."
 example = "3 + 1"
+
+[[lesson.step.beat]]
+text = "Ada's line with the bare equation. Name each word once."
+formal = "The same line, in the grown-up wording: $3 + 1 = 4$."
+show = "equation"
 
 # An ordered run following one pattern, ending with Ada's notice.
 [[problem_set]]

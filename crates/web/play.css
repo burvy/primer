@@ -259,3 +259,43 @@ body {
   font-family: var(--maths-font);
   font-size: 1.2em;
 }
+
+/* The three sound switches: small tick boxes, like a printed form. */
+.audio-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0;
+  font-family: var(--body-font);
+  font-size: 0.9rem;
+}
+.tickbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0;
+  font: inherit;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+}
+.tickbox .box {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--frame);
+  border-radius: calc(var(--corner) / 3);
+  background: var(--paper);
+  line-height: 0.8rem;
+  text-align: center;
+}
+.tickbox[aria-pressed="true"] {
+  color: var(--ink);
+}
+.tickbox[aria-pressed="true"] .box::after {
+  content: "✓";
+  color: var(--ink);
+}
+.ada {
+  cursor: pointer;
+}

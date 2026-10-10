@@ -15,6 +15,7 @@ mod check;
 mod convert;
 mod math;
 mod schema;
+pub mod voice;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -36,6 +37,8 @@ pub struct Content {
     lessons: HashMap<(String, String), Vec<BeatDto>>,
     /// What is not written yet. Not errors: the server prints them at start.
     pub gaps: Vec<String>,
+    /// Every line Ada reads aloud, in book order: the list for the voice actor.
+    pub lines: Vec<voice::Line>,
 }
 
 impl Content {
@@ -114,11 +117,13 @@ impl Content {
         if !errors.is_empty() {
             return Err(errors);
         }
+        let lines = built.lines();
         Ok(Content {
             gentle: built.chapters(Look::Gentle),
             exceptional: built.chapters(Look::Exceptional),
             lessons: built.lessons,
             gaps: check::coverage(&chapters, words.as_ref()),
+            lines,
         })
     }
 }
@@ -142,6 +147,8 @@ struct Pending {
     skill: &'static Skill,
     /// (position in the file, which look it is for, the step).
     steps: Vec<(usize, LookTag, Step)>,
+    /// (position in the file, the lines spoken there).
+    lines: Vec<(usize, Vec<voice::Line>)>,
 }
 
 /// The content as it is built up, file by file.
@@ -169,11 +176,14 @@ impl Built {
             errors.extend(messages.iter().map(|m| ContentError::new(file, id, m)));
         };
         let mut steps = Vec::new();
+        let mut lines = Vec::new();
 
         for lesson in &chapter.lesson {
             let (start, lesson) = (lesson.span().start, lesson.get_ref());
             match convert::lesson_beats(skill, lesson) {
                 Ok(beats) => {
+                    let spoken = beats.iter().filter_map(|b| b.voice.as_ref());
+                    lines.push((start, spoken.flat_map(voice::lines_of).collect()));
                     let key = (skill.id.to_string(), lesson.id.clone());
                     self.lessons.insert(key, beats);
                     steps.push((start, lesson.look, Step::Lesson(lesson.id.clone())));
@@ -184,7 +194,10 @@ impl Built {
         for set in &chapter.problem_set {
             let (start, set) = (set.span().start, set.get_ref());
             match convert::problem_set(skill, set) {
-                Ok(built) => steps.push((start, set.look, Step::Set(built))),
+                Ok(built) => {
+                    lines.push((start, convert::set_lines(set)));
+                    steps.push((start, set.look, Step::Set(built)));
+                }
                 Err(messages) => report(&set.id, messages),
             }
         }
@@ -198,7 +211,24 @@ impl Built {
         for praise in &chapter.praise {
             report(&praise.id, unreadable(&praise.text, &praise.formal));
         }
-        self.pending.push(Pending { skill, steps });
+        self.pending.push(Pending {
+            skill,
+            steps,
+            lines,
+        });
+    }
+
+    /// Every spoken line, chapter by chapter, each chapter in the order it
+    /// was written in its file.
+    fn lines(&self) -> Vec<voice::Line> {
+        self.pending
+            .iter()
+            .flat_map(|p| {
+                let mut lines: Vec<_> = p.lines.iter().collect();
+                lines.sort_by_key(|(start, _)| *start);
+                lines.into_iter().flat_map(|(_, spoken)| spoken.clone())
+            })
+            .collect()
     }
 
     /// The chapters a child in `look` sees, each with its steps back in the
@@ -477,6 +507,26 @@ when = "adds-1"
         // The fixture has one hint, for the abstract stage's off-by-one.
         assert!(gaps.contains("01-count-on.toml: no hint for Pictorial/off-by-one"), "{gaps}");
         assert!(!gaps.contains("Abstract/off-by-one"), "{gaps}");
+    }
+
+    #[test]
+    fn every_spoken_line_is_listed_in_book_order_with_its_name() {
+        let content = load(&[("01-count-on.toml", CH1)]).unwrap();
+        let names: Vec<&str> = content.lines.iter().map(|l| l.name.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "first.1.1.gentle",
+                "walk.notice.gentle",
+                "second.1.1.gentle",
+                "second.1.1.exceptional",
+            ]
+        );
+        // The speech has the maths spelled out.
+        assert_eq!(content.lines[3].speech, "Input 3, output f of 3 equals 4.");
+        // The beat carries the same name for the page.
+        let voice = content.beats("count-on-within-5", "second")[0].voice.clone().unwrap();
+        assert_eq!(voice.gentle.name, "second.1.1.gentle");
     }
 
     #[test]

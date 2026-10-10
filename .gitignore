@@ -2,3 +2,6 @@
 jev-key.env
 /crates/web/dist
 /primer.db*
+
+# Placeholder voices are regenerated with: cargo run -p primer-server -- voices
+/assets/voice/placeholder/

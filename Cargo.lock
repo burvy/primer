@@ -1529,6 +1529,7 @@ dependencies = [
  "primer-api",
  "primer-core",
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]
