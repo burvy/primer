@@ -112,3 +112,144 @@ body {
 .machine[data-open="true"] #hatch-closed {
   opacity: 0;
 }
+
+/* Towers: blocks coloured by the look's variables, animated by CSS only. */
+.picture .block-a {
+  fill: var(--accent);
+  stroke: var(--ink);
+}
+.picture .block-b {
+  fill: var(--good);
+  stroke: var(--ink);
+}
+.picture .block-num {
+  fill: var(--accent-ink);
+  font-family: var(--maths-font);
+  font-size: 14px;
+  text-anchor: middle;
+}
+.picture .block-total {
+  fill: var(--ink);
+  font-family: var(--maths-font);
+  font-size: 22px;
+  text-anchor: middle;
+}
+.picture.tower {
+  max-width: 8rem;
+}
+.picture.pouches {
+  max-width: 24rem;
+}
+@keyframes drop {
+  from {
+    transform: translateY(-3rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes slide {
+  from {
+    transform: translateX(var(--dx));
+  }
+  to {
+    transform: none;
+  }
+}
+.picture .arriving {
+  animation: drop 600ms ease-out both;
+}
+.picture .slide {
+  animation: slide 900ms ease-in-out both;
+}
+
+/* Ten frame and number line extras. */
+.picture .counter-ghost {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-dasharray: 4 3;
+}
+.picture .target {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+/* Equation parts that are being talked about. */
+.equation .hl {
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+/* Two machines joined by a pipe. Machine 2 is offset so the end of machine
+ * 1's pipe (at 360,120 of 400x300) lands in machine 2's funnel, whose top runs
+ * from x=140 to x=260 at y=40: 210 across and 80 down puts the pipe at the
+ * funnel's left side, on a 610x380 sheet. Machine 1 is drawn on top so its
+ * whole pipe shows. */
+.machines {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 610 / 380;
+  margin: var(--gap) auto;
+}
+.machines .machine {
+  position: absolute;
+  width: calc(400 / 610 * 100%);
+}
+.machines .machine-1 {
+  left: 0;
+  top: 0;
+  z-index: 1;
+}
+.machines .machine-2 {
+  left: calc(210 / 610 * 100%);
+  top: calc(80 / 380 * 100%);
+}
+.machines .machine-2 #pipe {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picture .arriving,
+  .picture .slide {
+    animation: none;
+  }
+}
+
+/* The sheet colour behind a machine drawing would hide the other machine, so
+ * in the joined view the drawing's plain background rectangle is not shown. */
+.machines .machine svg > rect:first-of-type {
+  display: none;
+}
+.machines .machine svg {
+  max-height: none;
+}
+
+/* Coin pouches: one plain coin design, everything coloured by variables. */
+.picture .pouch-body {
+  fill: var(--paper-edge);
+  stroke: var(--frame);
+  stroke-width: 2;
+}
+.picture .pouch-mouth {
+  fill: var(--ink-soft);
+  stroke: var(--frame);
+  stroke-width: 2;
+}
+.picture .coin {
+  fill: var(--accent);
+  stroke: var(--ink);
+}
+.picture .coin-total {
+  fill: var(--ink);
+  font-family: var(--maths-font);
+  font-size: 22px;
+  text-anchor: middle;
+}
+.picture .table {
+  stroke: var(--frame);
+  stroke-width: 2;
+}

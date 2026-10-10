@@ -16,7 +16,7 @@ use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
 use crate::components::lesson::LessonPage;
 use crate::components::look_switch::{LookSwitch, word};
-use crate::components::pictures::{NumberLine, TenFrame};
+use crate::components::pictures::{NumberLine, TenFrame, cells};
 
 /// What the page is showing. An `enum` makes the impossible impossible: the
 /// page is loading, or broken, or on a server page, or showing the verdict.
@@ -133,16 +133,38 @@ fn Practice(
         }
     };
 
-    // Pictures only help when the answer is the missing part; for `3 + □ = 7`
-    // the equation alone is shown.
+    // Pictures help for every shape. When the answer is the missing part the
+    // picture shows the sum; otherwise it shows the known numbers and leaves
+    // the hidden one as an empty dashed circle or ring.
     let adding = problem.op == "add";
     let (a, b) = (problem.a, problem.b);
-    let picture = match (stage.as_str(), problem.blank.as_str()) {
-        ("pictorial", "answer") => view! { <TenFrame a b take_away=!adding /> }.into_any(),
-        ("number_line", "answer") => {
-            let biggest = if adding { a + b } else { a };
-            let max = if biggest <= 10 { 10 } else { 20 };
-            view! { <NumberLine max from=Some(a) hop=b forward=adding /> }.into_any()
+    let whole = if adding { a + b } else { a - b };
+    let picture = match stage.as_str() {
+        "pictorial" => {
+            let shown = cells(&problem);
+            if shown.is_empty() {
+                ().into_any()
+            } else {
+                view! { <TenFrame cells=shown /> }.into_any()
+            }
+        }
+        "number_line" => {
+            let max = if a.max(whole).max(a + b) <= 10 {
+                10
+            } else {
+                20
+            };
+            match problem.blank.as_str() {
+                "answer" => {
+                    view! { <NumberLine max from=Some(a) hop=b forward=adding /> }.into_any()
+                }
+                "second" => {
+                    view! { <NumberLine max from=Some(a) hop=0 forward=adding target=whole /> }
+                        .into_any()
+                }
+                _ => view! { <NumberLine max from=None hop=0 forward=adding target=whole /> }
+                    .into_any(),
+            }
         }
         _ => ().into_any(),
     };

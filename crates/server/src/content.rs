@@ -39,21 +39,27 @@ fn beat(text: &str, formal: Option<&str>, show: &str) -> BeatDto {
 
 /// The beats of a lesson: one short sentence and one picture per tap.
 ///
-/// STUB wording, for the human to rewrite. Only chapter 1 has a real
-/// sequence; every other lesson is a single placeholder beat.
+/// STUB wording, for the human to rewrite. Chapters 1 and 2 have a real
+/// sequence that uses every picture; every other lesson is one placeholder beat.
 pub fn beats(skill: &str, _lesson: &str) -> Vec<BeatDto> {
-    if skill != "count-on-within-5" {
-        return vec![beat("A new chapter begins.", None, "equation")];
+    match skill {
+        "count-on-within-5" => chapter_1(),
+        "add-within-10" => chapter_2(),
+        _ => vec![beat("A new chapter begins.", None, "equation")],
     }
+}
+
+/// Chapter 1: counting on, built on a tower, then a number line and a machine.
+fn chapter_1() -> Vec<BeatDto> {
     vec![
         BeatDto {
             count: Some(3),
-            ..beat("Three stars shine over the gate.", None, "counters")
+            ..beat("Three blocks make a tower.", None, "tower")
         },
         BeatDto {
             count: Some(3),
             adding: Some(1),
-            ..beat("One more star joins them.", None, "counters")
+            ..beat("One more block lands on top.", None, "tower")
         },
         BeatDto {
             at: Some(3),
@@ -90,7 +96,79 @@ pub fn beats(skill: &str, _lesson: &str) -> Vec<BeatDto> {
         },
         BeatDto {
             label: Some("3 + 1 = □".into()),
+            highlight: Some("answer".into()),
             ..beat("Now you try the same kind of sum.", None, "equation")
+        },
+    ]
+}
+
+/// Chapter 2: adding, built on two coin pouches, two machines and a written sum.
+fn chapter_2() -> Vec<BeatDto> {
+    let pouches = |left: u32, right: u32, text: &str, formal: Option<&str>| BeatDto {
+        left: Some(left),
+        right: Some(right),
+        ..beat(text, formal, "pouches")
+    };
+    let sum = |text: &str, highlight: &str| BeatDto {
+        label: Some("3 + 4 = 7".into()),
+        highlight: Some(highlight.into()),
+        ..beat(text, None, "equation")
+    };
+    vec![
+        pouches(
+            3,
+            4,
+            "Here are two pouches of coins: 3 coins and 4 coins.",
+            None,
+        ),
+        BeatDto {
+            join: Some(true),
+            total: Some(7),
+            ..pouches(
+                3,
+                4,
+                "Pour them out together. Now there are 7 coins.",
+                Some("Joining $3$ and $4$ gives a total of $7$, the sum."),
+            )
+        },
+        BeatDto {
+            swap: Some(true),
+            ..pouches(
+                3,
+                4,
+                "Let the pouches trade places. Still 7 coins: the order does not matter.",
+                Some("Addition is commutative: $3 + 4 = 4 + 3$."),
+            )
+        },
+        BeatDto {
+            total: Some(3),
+            ..pouches(
+                3,
+                0,
+                "This pouch is empty: zero coins. Adding it changes nothing.",
+                Some("Zero is the identity: $3 + 0 = 3$."),
+            )
+        },
+        BeatDto {
+            input: Some(3),
+            output: Some(5),
+            highlight: Some("input-glow".into()),
+            count: Some(2),
+            ..beat(
+                "Two machines in a row: the first adds one, then the second adds one more.",
+                Some("Composing $x + 1$ with $x + 1$ gives $x + 2$."),
+                "machines",
+            )
+        },
+        sum("The numbers we add are called addends.", "addends"),
+        sum(
+            "The equals sign means both sides are the same amount.",
+            "equals",
+        ),
+        BeatDto {
+            label: Some("3 + 4 = □".into()),
+            highlight: Some("answer".into()),
+            ..beat("Now you try one.", None, "equation")
         },
     ]
 }

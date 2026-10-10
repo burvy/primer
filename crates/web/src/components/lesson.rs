@@ -4,8 +4,8 @@ use leptos::prelude::*;
 use primer_api::BeatDto;
 use primer_core::Look;
 
-use super::equation::RichText;
-use super::pictures::{Counters, Machine, NumberLine};
+use super::equation::{LabelEquation, RichText};
+use super::pictures::{Counters, Machine, Machines, NumberLine, Pouches, Tower};
 
 /// The picture for one beat. `match` on the `show` word picks the drawing;
 /// the beat's small settings (`count`, `at`, ...) are handed to it.
@@ -30,9 +30,36 @@ fn Picture(beat: BeatDto) -> impl IntoView {
             />
         }
         .into_any(),
-        "equation" => {
-            view! { <p class="equation">{beat.label.clone().unwrap_or_default()}</p> }.into_any()
+        "machines" => view! {
+            <Machines
+                input=beat.input
+                output=beat.output
+                highlight=beat.highlight.clone()
+                open=beat.open.unwrap_or(false)
+            />
         }
+        .into_any(),
+        "tower" => {
+            view! { <Tower count=beat.count.unwrap_or(0) adding=beat.adding.unwrap_or(0) /> }
+                .into_any()
+        }
+        "pouches" => view! {
+            <Pouches
+                left=beat.left.unwrap_or(0)
+                right=beat.right.unwrap_or(0)
+                join=beat.join.unwrap_or(false)
+                swap=beat.swap.unwrap_or(false)
+                total=beat.total
+            />
+        }
+        .into_any(),
+        "equation" => view! {
+            <LabelEquation
+                label=beat.label.clone().unwrap_or_default()
+                highlight=beat.highlight.clone()
+            />
+        }
+        .into_any(),
         other => view! { <p class="note">{format!("[picture \"{other}\" not drawn yet]")}</p> }
             .into_any(),
     }

@@ -22,7 +22,7 @@ pub struct ProblemDto {
 /// One tap of a lesson: a short sentence and one picture.
 ///
 /// `show` names the picture (`"machine"`, `"machines"`, `"tower"`,
-/// `"number-line"`, `"equation"` or `"counters"`). The other fields are small
+/// `"number-line"`, `"equation"`, `"counters"` or `"pouches"`). The other fields are small
 /// settings for that picture; a picture ignores the ones it does not use.
 /// `formal` replaces `text` in the Exceptional look. `$...$` in either marks
 /// maths (LaTeX).
@@ -37,10 +37,21 @@ pub struct BeatDto {
     pub hop: Option<u32>,
     pub input: Option<u32>,
     pub output: Option<u32>,
-    /// A hand-drawn layer of the picture to light up, like `"input-glow"`.
+    /// What to light up: a hand-drawn layer of a machine (`"input-glow"`,
+    /// `"output-glow"`) or a part of an equation (`"addends"`, `"equals"`,
+    /// `"answer"`).
     pub highlight: Option<String>,
     pub label: Option<String>,
     pub open: Option<bool>,
+    /// `"pouches"` only: the number of coins in each pouch, and what to do with them.
+    pub left: Option<u32>,
+    pub right: Option<u32>,
+    /// Pour both pouches out onto the table.
+    pub join: Option<bool>,
+    /// Trade the two pouches' places.
+    pub swap: Option<bool>,
+    /// Write this total above the pouches.
+    pub total: Option<u32>,
 }
 
 /// What the child sees next. `#[serde(tag = "type")]` writes the variant name

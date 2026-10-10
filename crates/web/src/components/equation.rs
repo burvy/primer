@@ -32,6 +32,33 @@ pub fn Equation(problem: ProblemDto, #[prop(into)] typed: Signal<String>) -> imp
     }
 }
 
+/// An equation written as text, like `3 + 4 = 7`, with one part lit up.
+///
+/// `highlight` is `"addends"` (the numbers being added), `"equals"` (the `=`
+/// sign) or `"answer"` (what follows `=`). Each word of the label is wrapped
+/// in a `<span>`; the lit ones get the class `hl`, which `play.css` styles.
+#[component]
+pub fn LabelEquation(label: String, highlight: Option<String>) -> impl IntoView {
+    let words: Vec<String> = label.split(' ').map(String::from).collect();
+    let equals_at = words.iter().position(|w| w == "=");
+    let parts = words
+        .into_iter()
+        .enumerate()
+        .map(|(i, word)| {
+            // Before `=` and a number means an addend.
+            let kind = match equals_at {
+                Some(eq) if i < eq && word.chars().all(|c| c.is_ascii_digit()) => "addends",
+                Some(eq) if i == eq => "equals",
+                Some(eq) if i > eq => "answer",
+                _ => "",
+            };
+            let lit = highlight.as_deref() == Some(kind);
+            view! { <span class:hl=lit>{word}" "</span> }
+        })
+        .collect_view();
+    view! { <p class="equation">{parts}</p> }
+}
+
 /// Text with maths inside `$...$` (LaTeX). Real MathML rendering is slice 12;
 /// until then the maths parts are shown as written, in the maths font.
 /// `split('$')` cuts the text at each dollar sign, so every second piece is
