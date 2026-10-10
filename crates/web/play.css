@@ -569,3 +569,23 @@ body.speaking .ada #mouth-closed {
   text-transform: uppercase;
   color: var(--mark);
 }
+
+/* ---- What Ada says about an answer, a set or a story ---- */
+
+/* Ada on the left (she keeps her size), the line beside her. */
+.says {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  margin: var(--gap) 0;
+}
+.says .ada {
+  flex: none;
+}
+.said {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.said math {
+  font-family: var(--maths-font);
+}

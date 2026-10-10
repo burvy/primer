@@ -8,7 +8,7 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{AnswerRequest, AudioSettings, OpenerDto, PageDto, ProblemDto};
+use primer_api::{AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
 use primer_core::{Input, Key, Look, press};
 
 use crate::api;
@@ -19,6 +19,7 @@ use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
 use crate::components::lesson::LessonPage;
 use crate::components::look_switch::{LookSwitch, word};
+use crate::components::notes::AdaSays;
 use crate::components::pictures::{NumberLine, TenFrame, cells};
 
 /// What the page is showing. An `enum` makes the impossible impossible: the
@@ -32,11 +33,33 @@ enum Screen {
     Cover(PageDto),
     /// A chapter's opening page, before its first lesson.
     Opener(PageDto),
-    /// Shown after an answer; `next` is where "Continue" goes.
-    Feedback {
-        correct: bool,
+    /// Shown after an answer: what Ada says about it. "Continue" goes on to
+    /// the end of the set (if the answer finished one) and then to `next`.
+    /// (Boxed: the reply is much bigger than the other screens.)
+    Feedback(Box<AnswerResponse>),
+    /// A finished set: Ada's question, then the child taps "I see it".
+    Question {
+        question: NoteDto,
+        notice: Option<NoteDto>,
         next: PageDto,
     },
+    /// A finished set: what Ada noticed.
+    Notice {
+        notice: NoteDto,
+        next: PageDto,
+    },
+}
+
+/// What follows an answer's feedback: the set's question and notice when the
+/// answer finished a set, then `next`.
+fn after_feedback(set_end: Option<SetEndDto>, next: PageDto) -> Screen {
+    match set_end {
+        Some(SetEndDto { question: Some(question), notice }) => {
+            Screen::Question { question, notice, next }
+        }
+        Some(SetEndDto { question: None, notice: Some(notice) }) => Screen::Notice { notice, next },
+        _ => show(Ok(next)),
+    }
 }
 
 /// Turns the result of a call into the next screen. A lesson that starts a
@@ -145,7 +168,28 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>) -> A
         view! { <p class="note">{format!("Something went wrong: {message}")}</p> }
             .into_any()
     }
-    Screen::Feedback { correct, next } => view! { <Feedback correct next screen /> }.into_any(),
+    Screen::Feedback(reply) => view! { <Feedback reply=*reply look screen /> }.into_any(),
+    Screen::Question { question, notice, next } => {
+        let on_see = move |_| {
+            screen.set(match notice.clone() {
+                Some(notice) => Screen::Notice { notice, next: next.clone() },
+                None => show(Ok(next.clone())),
+            })
+        };
+        view! {
+            <AdaSays note=question look />
+            <button type="button" class="next" on:click=on_see>"I see it ▸"</button>
+        }
+        .into_any()
+    }
+    Screen::Notice { notice, next } => view! {
+        <AdaSays note=notice look />
+        <button type="button" class="next"
+            on:click=move |_| screen.set(show(Ok(next.clone())))>
+            "Continue ▸"
+        </button>
+    }
+    .into_any(),
     Screen::Cover(page) => {
         let on_open = move |()| screen.set(show(Ok(page.clone())));
         view! { <Cover on_open /> }.into_any()
@@ -169,8 +213,9 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>) -> A
         };
         view! { <LessonPage beats look on_done /> }.into_any()
     }
-    Screen::Page(PageDto::Practice { page_id, problem, stage, .. }) => {
-        view! { <Practice page_id problem stage screen /> }.into_any()
+    Screen::Page(PageDto::Practice { page_id, problem, stage, story, .. }) => {
+        let story = story.map(|boxed| *boxed);
+        view! { <Practice page_id problem stage story look screen /> }.into_any()
     }
     Screen::Page(PageDto::Story) => {
         view! { <p>"The end of this part of the book."</p> }.into_any()
@@ -184,6 +229,8 @@ fn Practice(
     page_id: String,
     problem: ProblemDto,
     stage: String,
+    story: Option<NoteDto>,
+    look: RwSignal<Look>,
     screen: RwSignal<Screen>,
 ) -> impl IntoView {
     let input = RwSignal::new(Input::Empty);
@@ -204,10 +251,7 @@ fn Practice(
         };
         spawn_local(async move {
             screen.set(match api::answer(&body).await {
-                Ok(reply) => Screen::Feedback {
-                    correct: reply.correct,
-                    next: reply.next,
-                },
+                Ok(reply) => Screen::Feedback(Box::new(reply)),
                 Err(message) => Screen::Failed(message),
             });
         });
@@ -255,7 +299,10 @@ fn Practice(
         _ => ().into_any(),
     };
 
+    // A word problem tells its story first, in Ada's voice.
+    let story = story.map(|note| view! { <AdaSays note look /> });
     view! {
+        {story}
         {picture}
         <Equation problem=problem typed=Signal::derive(move || input.get().shown()) />
         <Keypad on_key=on_key />
@@ -267,22 +314,34 @@ fn Practice(
     }
 }
 
-/// The verdict, then on to the next page.
+/// What Ada says about the answer, then on to the next page.
+///
+/// A right answer chimes and Ada praises it; a wrong one gets Ada's hint. If
+/// the book has no line for it, a short plain sentence stands in.
 #[component]
-fn Feedback(correct: bool, next: PageDto, screen: RwSignal<Screen>) -> impl IntoView {
-    // A right answer chimes.
-    if correct {
+fn Feedback(reply: AnswerResponse, look: RwSignal<Look>, screen: RwSignal<Screen>) -> impl IntoView {
+    if reply.correct {
         audio::sound("chime");
     }
-    // STUB wording: the human writes the real lines.
-    let message = if correct {
+    // STUB wording, used only when the book has no line to say.
+    let stub = if reply.correct {
         "Yes, that's right."
     } else {
         "Not quite. Let's keep going."
     };
+    let said = match (reply.correct, reply.praise, reply.hint) {
+        (true, Some(praise), _) => Some(praise),
+        (false, _, Some(hint)) => Some(hint),
+        _ => None,
+    };
+    let (set_end, next) = (reply.set_end, reply.next);
     view! {
-        <p class="note">{message}</p>
-        <button type="button" class="next" on:click=move |_| screen.set(Screen::Page(next.clone()))>
+        {match said {
+            Some(note) => view! { <AdaSays note look /> }.into_any(),
+            None => view! { <p class="note">{stub}</p> }.into_any(),
+        }}
+        <button type="button" class="next"
+            on:click=move |_| screen.set(after_feedback(set_end.clone(), next.clone()))>
             "Continue ▸"
         </button>
     }

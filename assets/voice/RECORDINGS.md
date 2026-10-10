@@ -51,6 +51,35 @@ the browser's own voice.
 | `ch1-one-past.question.gentle` | gentle | Look at 3 plus 1 and 3 plus 2. What do you notice? | placeholder |
 | `ch1-one-past.notice.gentle` | gentle | Did you see? Adding 2 lands one step past adding 1. | placeholder |
 | `ch1-one-past.notice.exceptional` | exceptional | 3 plus 2 is the successor of 3 plus 1. | placeholder |
+| `ch1-tower2.gentle` | gentle | The builder has 3 stones. A helper brings 1 more. How many stones now? | placeholder |
+| `ch1-tower2.exceptional` | exceptional | The builder has 3 stones. One more arrives. Find 3 plus 1. | placeholder |
+| `ch1-tower3.gentle` | gentle | The builder placed 3 stones. He places 2 more. How many stones now? | placeholder |
+| `ch1-tower3.exceptional` | exceptional | The builder placed 3 stones. He places 2 more. Find 3 plus 2. | placeholder |
+| `ch1-hint-off-by-one-tower.gentle` | gentle | Count the steps already there. Then count the one new step. | placeholder |
+| `ch1-hint-off-by-one-tower.exceptional` | exceptional | Count the steps first. Adding 1 means the very next number. | placeholder |
+| `ch1-hint-off-by-one-line.gentle` | gentle | Stand ON the first number, then hop. Count only the hops. | placeholder |
+| `ch1-hint-off-by-one-line.exceptional` | exceptional | Start on the first number. Each hop is one successor step. Count only each step. | placeholder |
+| `ch1-hint-off-by-one.gentle` | gentle | Say the first number. Then say the next number. Do this once for each time you add one. | placeholder |
+| `ch1-hint-off-by-one.exceptional` | exceptional | Find the successor of the first number. For plus 2, find the successor of the successor. | placeholder |
+| `ch1-hint-wrong-operation.gentle` | gentle | Look at the sign. plus means the tower grows. | placeholder |
+| `ch1-hint-wrong-operation.exceptional` | exceptional | The sign is plus: the answer must be bigger than where you started. | placeholder |
+| `ch1-hint-guess.gentle` | gentle | Take your time. Picture the tower steps, then add the new step. | placeholder |
+| `ch1-hint-guess.exceptional` | exceptional | Slow down. Which number comes next? | placeholder |
+| `ch1-praise-1.gentle` | gentle | You just knew it! Counting on in your head. | placeholder |
+| `ch1-praise-2.gentle` | gentle | Great job, not counting from one! | placeholder |
+| `ch1-praise-3.gentle` | gentle | That's the successor! | placeholder |
+| `ch1-praise-3.exceptional` | exceptional | Correct: the successor. | placeholder |
+| `ch1-praise-4.gentle` | gentle | Two hops, two steps. Well done! | placeholder |
+| `ch1-praise-4.exceptional` | exceptional | Two steps of successor. Exactly. | placeholder |
+| `ch1-praise-5.gentle` | gentle | The builder would be proud. | placeholder |
+| `ch1-praise-6.gentle` | gentle | Great recovery! | placeholder |
+| `ch1-praise-6.exceptional` | exceptional | Good recovery. | placeholder |
+| `ch1-praise-7.gentle` | gentle | You spotted the pattern. | placeholder |
+| `ch1-praise-7.exceptional` | exceptional | You found the pattern before Ada told you. | placeholder |
+| `ch1-praise-8.gentle` | gentle | Correct! | placeholder |
+| `ch1-praise-8.exceptional` | exceptional | Correct. | placeholder |
+| `ch1-praise-9.gentle` | gentle | That's right! | placeholder |
+| `ch1-praise-9.exceptional` | exceptional | Right. | placeholder |
 | `ch2-joining.1.1.gentle` | gentle | A builder has two money pouches for buying stones. One with 3 gold coins, another with 4 gold coins. | placeholder |
 | `ch2-joining.1.2.gentle` | gentle | The builder spills both pouches onto a tower step. How many coins are on that tower step? | placeholder |
 | `ch2-joining.1.2.exceptional` | exceptional | The builder spills both pouches on a step. How many coins are on the step? | placeholder |
@@ -98,3 +127,26 @@ the browser's own voice.
 | `ch2-doubles-set.question.gentle` | gentle | Look at the answers. What do you notice? | placeholder |
 | `ch2-doubles-set.notice.gentle` | gentle | Did you see? The doubles climb by 2: 2, 4, 6, 8, 10. | placeholder |
 | `ch2-doubles-set.notice.exceptional` | exceptional | Each double is 2 more than the last: 2, 4, 6, 8, 10. | placeholder |
+| `ch2-stones.gentle` | gentle | The builder has 4 stones. A helper brings 3 more. How many stones in all? | placeholder |
+| `ch2-stones.exceptional` | exceptional | The builder has 4 stones and receives 3 more. Find 4 plus 3. | placeholder |
+| `ch2-stairs.gentle` | gentle | The builder climbs 2 steps, then 6 more. How many steps in all? | placeholder |
+| `ch2-stairs.exceptional` | exceptional | Climb 2 steps, then 6. Find 2 plus 6. | placeholder |
+| `ch2-empty-cart.gentle` | gentle | The cart has 5 stones. The helper brings 0 more. How many now? | placeholder |
+| `ch2-empty-cart.exceptional` | exceptional | 5 stones, and 0 more arrive. Find 5 plus 0. | placeholder |
+| `ch2-hint-off-by-one-pouches.gentle` | gentle | Count coins in the first pouch. Then count on for each coin in the second pouch. | placeholder |
+| `ch2-hint-off-by-one-pouches.exceptional` | exceptional | Start from the first addend and count on. | placeholder |
+| `ch2-hint-off-by-one-line.gentle` | gentle | Stand on the first addend. Count only the hops. | placeholder |
+| `ch2-hint-off-by-one.gentle` | gentle | Start with the bigger number. Count on the smaller one. They are the same because of commutativity. | placeholder |
+| `ch2-hint-off-by-one.exceptional` | exceptional | Use commutativity: start from the larger addend and count on. | placeholder |
+| `ch2-hint-wrong-operation.gentle` | gentle | Look at the sign. plus means we join the groups. | placeholder |
+| `ch2-hint-wrong-operation.exceptional` | exceptional | The sign is plus: the sum is at least as big as each addend. | placeholder |
+| `ch2-hint-guess.gentle` | gentle | Take your time. Spill the bigger pouch first. How many coins are there? Then count on the coins from the other pouch, one by one. | placeholder |
+| `ch2-hint-guess.exceptional` | exceptional | Slow down. Which addend is bigger? Add the rest on. | placeholder |
+| `ch2-praise-1.gentle` | gentle | You started from the bigger number. Smart! | placeholder |
+| `ch2-praise-1.exceptional` | exceptional | Larger addend first. Efficient. | placeholder |
+| `ch2-praise-2.gentle` | gentle | You found the sum! | placeholder |
+| `ch2-praise-2.exceptional` | exceptional | Correct sum. | placeholder |
+| `ch2-praise-3.gentle` | gentle | You fixed it. That is what mathematicians do. | placeholder |
+| `ch2-praise-4.gentle` | gentle | The builder thanks you for helping him manage his money! | placeholder |
+| `ch2-praise-5.gentle` | gentle | You saw the rule before Ada said it. | placeholder |
+| `ch2-praise-5.exceptional` | exceptional | You found the rule before Ada stated it. | placeholder |

@@ -75,7 +75,7 @@ fn Picture(beat: BeatDto) -> impl IntoView {
 /// blinks her (`eyes-open` / `eyes-closed`) and opens her mouth (`mouth-open`)
 /// while `<body>` has the class `speaking`. Tapping her reads the line again.
 #[component]
-fn Ada(#[prop(into)] on_tap: Callback<()>) -> impl IntoView {
+pub fn Ada(#[prop(into)] on_tap: Callback<()>) -> impl IntoView {
     let art = art::drawing("lessons/ada.svg");
     view! {
         <div class="ada" class:has-art=move || art.get().is_some()

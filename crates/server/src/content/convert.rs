@@ -5,13 +5,17 @@
 //! Each function returns `Err` with a list of messages when something is
 //! wrong, so the writer sees every problem in an entry at once.
 
-use primer_api::BeatDto;
+use primer_api::{BeatDto, NoteDto, SetEndDto};
 use primer_core::{ProblemSet, Skill};
 
 use super::check::{pattern_for, problem_for};
+use super::feedback::{Hint, Praise, Story, fill_in};
 use super::math::to_html;
-use super::schema::{Beat, Lesson, ProblemSet as SetFile, Show};
-use super::voice::{EXCEPTIONAL, GENTLE, Line, beat_voice, set_name, speakable};
+use super::schema::{
+    Beat, Hint as HintFile, Lesson, Praise as PraiseFile, ProblemSet as SetFile, Show,
+    WordProblem,
+};
+use super::voice::{EXCEPTIONAL, GENTLE, Line, beat_voice, note_voice, set_name, speakable};
 
 /// All the beats of a lesson, in order, across all its steps.
 ///
@@ -103,6 +107,72 @@ fn beat_dto(
             beat.formal.as_deref(),
         )),
     })
+}
+
+/// A line of the book as the page wants it: both wordings as HTML (maths as
+/// MathML), and how Ada reads them. `id` names the recordings. Every
+/// unreadable wording is reported, not only the first.
+fn note(id: &str, text: &str, formal: Option<&str>) -> Result<NoteDto, Vec<String>> {
+    let text_html = to_html(text);
+    let formal_html = formal.map(to_html).transpose();
+    match (text_html, formal_html) {
+        (Ok(text_html), Ok(formal_html)) => Ok(NoteDto {
+            text: text_html,
+            formal: formal_html,
+            voice: note_voice(id, text, formal),
+        }),
+        (text_html, formal_html) => {
+            let errors = [text_html.err(), formal_html.err()];
+            Err(errors.into_iter().flatten().collect())
+        }
+    }
+}
+
+/// A word problem as a story for its sum, with `{a}` and `{b}` filled in.
+pub fn story(problem: &WordProblem) -> Result<Story, Vec<String>> {
+    let (a, b) = (problem.a, problem.b);
+    let text = fill_in(&problem.text, a, b);
+    let formal = problem.formal.as_ref().map(|f| fill_in(f, a, b));
+    Ok(Story {
+        look: problem.look,
+        stage: problem.stage,
+        a,
+        b,
+        note: note(&problem.id, &text, formal.as_deref())?,
+    })
+}
+
+/// A hint as the server keeps it.
+pub fn hint(hint: &HintFile) -> Result<Hint, Vec<String>> {
+    Ok(Hint {
+        look: hint.look,
+        stage: hint.stage,
+        mistake: hint.mistake,
+        note: note(&hint.id, &hint.text, hint.formal.as_deref())?,
+    })
+}
+
+/// A line of praise as the server keeps it.
+pub fn praise(praise: &PraiseFile) -> Result<Praise, Vec<String>> {
+    Ok(Praise {
+        look: praise.look,
+        when: praise.when,
+        note: note(&praise.id, &praise.text, praise.formal.as_deref())?,
+    })
+}
+
+/// What Ada says when a set ends: its question, then its notice. `None` if
+/// the set has neither. (Their wording was already checked by
+/// [`problem_set`], so a line that cannot be read is simply left out.)
+pub fn set_end(set: &SetFile) -> Option<SetEndDto> {
+    let question = set
+        .question
+        .as_deref()
+        .and_then(|text| note(&format!("{}.question", set.id), text, None).ok());
+    let notice = set.notice.as_deref().and_then(|text| {
+        note(&format!("{}.notice", set.id), text, set.formal_notice.as_deref()).ok()
+    });
+    (question.is_some() || notice.is_some()).then_some(SetEndDto { question, notice })
 }
 
 /// `3 + 4` as the full equation `3 + 4 = 7`. A problem that already has its

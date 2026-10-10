@@ -35,6 +35,24 @@ pub fn set_name(set: &str, part: &str, look: &str) -> String {
     format!("{set}.{part}.{look}")
 }
 
+/// The name of a hint's, praise's or story's recording: `<id>.<look>`.
+pub fn note_name(id: &str, look: &str) -> String {
+    format!("{id}.{look}")
+}
+
+/// The voice of a hint, a word of praise or a story. Like a beat's, the
+/// Exceptional line exists only when there is a `formal` wording.
+pub fn note_voice(id: &str, text: &str, formal: Option<&str>) -> VoiceDto {
+    let line = |look: &str, text: &str| LineDto {
+        name: note_name(id, look),
+        speech: speakable(text),
+    };
+    VoiceDto {
+        gentle: line(GENTLE, text),
+        exceptional: formal.map(|formal| line(EXCEPTIONAL, formal)),
+    }
+}
+
 /// The voice of one lesson beat. The Exceptional line exists only when the
 /// beat has its own `formal` wording.
 pub fn beat_voice(
