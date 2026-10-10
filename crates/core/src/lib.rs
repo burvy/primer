@@ -20,7 +20,7 @@ mod skill;
 
 pub use generate::generate;
 pub use hero_name::{HeroName, HeroNameError, MAX_LETTERS};
-pub use keypad::{Input, Key, press};
+pub use keypad::{Input, Key, key_named, press};
 pub use learner::{
     Attempt, Event, Learner, Outcome, Progress, RECENT, SLOW_MS, Strategy, WINS_NEEDED,
 };

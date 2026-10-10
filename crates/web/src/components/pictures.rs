@@ -405,20 +405,12 @@ fn MachineDrawing(
     }
 }
 
-/// "in: 3 → out: 4", from whichever numbers are known.
-fn caption(input: Option<u32>, output: Option<u32>) -> String {
-    match (input, output) {
-        (Some(i), Some(o)) => format!("in: {i}  →  out: {o}"),
-        (Some(i), None) => format!("in: {i}"),
-        _ => String::new(),
-    }
-}
-
-/// Ada's machine.
+/// Ada's machine. It runs (the block drops through) when the beat puts a
+/// number in. The numbers themselves are written under the picture by the
+/// lesson page, so they stay when the beat changes.
 #[component]
 pub fn Machine(
     input: Option<u32>,
-    output: Option<u32>,
     highlight: Option<String>,
     open: bool,
     label: Option<String>,
@@ -427,7 +419,6 @@ pub fn Machine(
     view! {
         <MachineDrawing drawing glow=highlight.unwrap_or_default() open
             run=input.is_some() label=label.unwrap_or_default() class="machine" />
-        <p class="machine-io">{caption(input, output)}</p>
     }
 }
 
@@ -442,10 +433,13 @@ const JOINED: usize = 2;
 /// right under the chute before it, from the drawing itself.
 /// The input glow belongs to the first machine and the output glow to the
 /// last.
+///
+/// Only one machine runs in a beat: `running` is its number (from 0), and
+/// no machine runs when it is `None`. So each machine moves on its own beat,
+/// when the child is reading about it.
 #[component]
 pub fn Machines(
-    input: Option<u32>,
-    output: Option<u32>,
+    running: Option<usize>,
     highlight: Option<String>,
     open: bool,
     label: Option<String>,
@@ -462,20 +456,20 @@ pub fn Machines(
     });
     let machines = (0..JOINED)
         .map(|k| {
+            let runs = running == Some(k);
             let own_glow = match glow.as_str() {
                 "input-glow" if k == 0 => glow.clone(),
                 "output-glow" if k == JOINED - 1 => glow.clone(),
                 _ => String::new(),
             };
             view! {
-                <MachineDrawing drawing glow=own_glow open run=input.is_some()
+                <MachineDrawing drawing glow=own_glow open run=runs
                     label="+1".to_string() class="machine" />
             }
         })
         .collect_view();
     view! {
         <div class="machines" node_ref=holder>{machines}</div>
-        <p class="machine-io">{caption(input, output)}</p>
         // The beat's own label is the rule of the two joined: "together: +2".
         {label.map(|rule| view! { <p class="machine-io">{format!("together: {rule}")}</p> })}
     }

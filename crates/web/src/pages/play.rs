@@ -9,7 +9,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use primer_api::{ChildDto, ContentsDto, AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
-use primer_core::{Input, Key, Look, press};
+use primer_core::{Input, Key, Look, key_named, press};
 
 use crate::api;
 use crate::audio;
@@ -335,6 +335,25 @@ fn Practice(
             submit.run(());
         }
     };
+    // A computer keyboard works like the keypad: digits and Backspace type,
+    // Enter (or `=`, the last key of "3 + 4 =") checks. `+` and `-` are
+    // accepted and do nothing, so nothing odd happens when they are typed.
+    // The listener goes away when this problem does (leptos removes it).
+    let _keyboard = window_event_listener(leptos::ev::keydown, move |event| {
+        if event.ctrl_key() || event.alt_key() || event.meta_key() {
+            return;
+        }
+        let name = event.key();
+        if let Some(key) = key_named(&name) {
+            event.prevent_default();
+            on_key(key);
+        } else if name == "Enter" || name == "=" {
+            event.prevent_default();
+            submit.run(());
+        } else if name == "+" || name == "-" {
+            event.prevent_default();
+        }
+    });
 
     // Pictures help for every shape. When the answer is the missing part the
     // picture shows the sum; otherwise it shows the known numbers and leaves

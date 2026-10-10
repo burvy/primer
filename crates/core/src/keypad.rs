@@ -56,6 +56,23 @@ impl Input {
     }
 }
 
+/// What a computer keyboard key means for the keypad.
+///
+/// `name` is the browser's name for the key (`KeyboardEvent.key`): `"7"` for
+/// the 7 key, `"Backspace"` for the backspace key. Anything else, such as
+/// `"a"`, `"+"` or `"Enter"`, is not a keypad key: the page decides what
+/// those do (Enter checks the answer; the others do nothing).
+pub fn key_named(name: &str) -> Option<Key> {
+    match name {
+        "Backspace" => Some(Key::Back),
+        _ => match name.as_bytes() {
+            // One character, and an ASCII digit: `b - b'0'` is its value.
+            [b @ b'0'..=b'9'] => Some(Key::Digit(b - b'0')),
+            _ => None,
+        },
+    }
+}
+
 /// Applies one key press and gives back the new input.
 ///
 /// `match` on a tuple looks at the old input and the key together.
@@ -82,6 +99,17 @@ mod tests {
     fn type_keys(keys: &[Key]) -> Input {
         keys.iter()
             .fold(Input::Empty, |input, &key| press(input, key))
+    }
+
+    #[test]
+    fn computer_keys_are_named_like_keypad_keys() {
+        assert_eq!(key_named("0"), Some(Key::Digit(0)));
+        assert_eq!(key_named("7"), Some(Key::Digit(7)));
+        assert_eq!(key_named("Backspace"), Some(Key::Back));
+        // Not keypad keys.
+        for name in ["a", "+", "-", "=", "Enter", "10", "", "Shift", "٣"] {
+            assert_eq!(key_named(name), None, "{name:?}");
+        }
     }
 
     #[test]

@@ -164,7 +164,6 @@
       m.style.left = ((k * dx - minX) / width) * 100 + "%";
       m.style.top = ((k * dy - minY) / height) * 100 + "%";
       m.style.width = (vb.width / width) * 100 + "%";
-      m.style.setProperty("--step", k); // the block and gear go one after another
     });
   }
 

@@ -335,21 +335,19 @@ body {
 /* ---- Hand-drawn art hooks. Each part exists only when its file does. ---- */
 
 /* The machine: a block drops from funnel to chute while the gear turns once.
- * `data-run` is set when the beat puts a number in. In two joined machines
- * the second starts when the first has finished. */
+ * `data-run` is set when the beat puts a number in. In joined machines only
+ * the machine whose beat it is has it, so they run one at a time. */
 .machine .block-mover {
   opacity: 0;
   transform: translate(var(--bx0, 0px), var(--by0, 0px));
 }
 .machine[data-run="true"] .block-mover {
   animation: pass 1400ms ease-in forwards;
-  animation-delay: calc(var(--step, 0) * 1400ms);
 }
 .machine[data-run="true"] #gear {
   transform-box: fill-box;
   transform-origin: center;
   animation: spin 1400ms linear forwards;
-  animation-delay: calc(var(--step, 0) * 1400ms);
 }
 @keyframes pass {
   from {
