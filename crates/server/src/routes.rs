@@ -317,9 +317,10 @@ fn problem_dto(problem: &Problem) -> ProblemDto {
     }
 }
 
-/// Core page to JSON page. `look` picks which look's story (word problem)
-/// a problem is told in.
-fn page_dto(page: &Page, learner: &Learner, content: &Content, look: primer_core::Look) -> PageDto {
+/// Core page to JSON page. A story page's words are found by its set id;
+/// `_look` is no longer needed (the chapters are already split by look) and
+/// can be dropped from the callers in a later tidy-up.
+fn page_dto(page: &Page, learner: &Learner, content: &Content, _look: primer_core::Look) -> PageDto {
     match page {
         Page::Lesson {
             skill,
@@ -355,7 +356,7 @@ fn page_dto(page: &Page, learner: &Learner, content: &Content, look: primer_core
             stage: name(STAGES, *stage).to_string(),
             hint: hint.map(|kind| name(MISTAKES, kind).to_string()),
             easier: *easier,
-            story: content.story(skill, look, *stage, problem).map(Box::new),
+            story: content.story(skill, set_id).map(Box::new),
         },
         Page::Story => PageDto::Story,
     }
@@ -637,20 +638,20 @@ text = "Correct!"
     }
 
     #[tokio::test]
-    async fn a_word_problem_is_told_at_its_stage_and_sum_only() {
+    async fn a_word_problem_is_told_once_at_its_stage() {
         let file = temp_db("story");
         let app = app(&file).await;
         let page = first_problem(&app).await;
         let PageDto::Practice { problem, story, .. } = &page else {
             panic!("expected a problem");
         };
-        // The set starts with `0 + 1` at the pictures stage: the story fits.
+        // The child starts at the pictures stage, so its story comes first.
         assert_eq!(problem.text, "0 + 1");
         let story = story.clone().expect("a story for 0 + 1");
         let story = *story;
         assert_eq!(story.text, "The builder has 0 stones and 1 more.");
         assert_eq!(story.voice.gentle.name, "stones.gentle");
-        // The next problem, `1 + 1`, has no story.
+        // Then the set: its own `0 + 1` is a plain sum, not the story again.
         let reply = answer_with(&app, &page, Some(1)).await;
         let PageDto::Practice { story, .. } = reply.next else {
             panic!("expected a problem");
@@ -692,6 +693,8 @@ text = "Correct!"
         let file = temp_db("setend");
         let app = app(&file).await;
         let mut page = first_problem(&app).await;
+        // The pictures-stage word problem is told first; then the set begins.
+        page = answer_with(&app, &page, Some(right_answer(&page))).await.next;
         // Four problems in the set: the notice comes with the last answer only.
         for done in 1..=4 {
             let reply = answer_with(&app, &page, Some(right_answer(&page))).await;

@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::look::Look;
 use crate::mistake::MistakeKind;
+use crate::policy::story_id;
 use crate::problem::Problem;
 use crate::skill::{Skill, Stage};
 
@@ -149,12 +150,17 @@ impl Learner {
     }
 
     fn attempt(mut self, at: &Attempt) -> Learner {
-        let started = self.sets_started.entry(at.skill).or_default();
-        if !started.contains(&at.set_id) {
-            started.push(at.set_id.clone());
-            self.recent_at_set_start = self.recent.iter().copied().collect();
+        // A story is told in the middle of whatever set is running, so it
+        // must not count as starting a set: that would lose the place of a
+        // generated set (see `policy::generated`).
+        if story_id(&at.set_id).is_none() {
+            let started = self.sets_started.entry(at.skill).or_default();
+            if !started.contains(&at.set_id) {
+                started.push(at.set_id.clone());
+                self.recent_at_set_start = self.recent.iter().copied().collect();
+            }
+            self.current_set = Some(at.set_id.clone());
         }
-        self.current_set = Some(at.set_id.clone());
         *self.answered.entry(at.set_id.clone()).or_default() += 1;
         self.recent.push_back(at.problem);
         if self.recent.len() > RECENT {

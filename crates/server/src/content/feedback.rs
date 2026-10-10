@@ -67,13 +67,11 @@ pub struct Praise {
     pub note: NoteDto,
 }
 
-/// A word problem: a story for the sum `a + b` at one stage.
+/// A word problem's words, found by its id. When to tell it is the core
+/// policy's job (`primer_core::policy::Story`).
 #[derive(Debug, Clone)]
 pub struct Story {
-    pub look: LookTag,
-    pub stage: StageTag,
-    pub a: u32,
-    pub b: u32,
+    pub id: String,
     pub note: NoteDto,
 }
 
@@ -152,18 +150,6 @@ pub fn pick_praise<'a>(
         return None;
     }
     Some(chosen[rng.random_range(0..chosen.len())])
-}
-
-/// The story for the sum `a + b` at `stage`, if the book has one.
-pub fn pick_story(
-    stories: &[Story],
-    look: Look,
-    stage: StageTag,
-    (a, b): (u32, u32),
-) -> Option<&Story> {
-    stories
-        .iter()
-        .find(|s| in_look(s.look, look) && s.stage == stage && (s.a, s.b) == (a, b))
 }
 
 /// A word problem's text with `{a}` and `{b}` replaced by its numbers.
@@ -337,29 +323,6 @@ mod tests {
             pick_praise(&lines, Look::Gentle, &[], &mut rng).map(|p| p.note.text.clone())
         };
         assert_eq!(pick(5), pick(5));
-    }
-
-    #[test]
-    fn a_story_needs_the_same_sum_and_stage() {
-        let story = |look, stage, a, b, text: &str| Story {
-            look,
-            stage,
-            a,
-            b,
-            note: note(text),
-        };
-        let stories = [
-            story(LookTag::Both, StageTag::Pictorial, 3, 1, "stones"),
-            story(LookTag::Exceptional, StageTag::Pictorial, 4, 2, "formal only"),
-        ];
-        let pick = |look, stage, sum| {
-            pick_story(&stories, look, stage, sum).map(|s| s.note.text.as_str())
-        };
-        assert_eq!(pick(Look::Gentle, StageTag::Pictorial, (3, 1)), Some("stones"));
-        assert_eq!(pick(Look::Gentle, StageTag::Abstract, (3, 1)), None);
-        assert_eq!(pick(Look::Gentle, StageTag::Pictorial, (1, 3)), None);
-        assert_eq!(pick(Look::Gentle, StageTag::Pictorial, (4, 2)), None);
-        assert_eq!(pick(Look::Exceptional, StageTag::Pictorial, (4, 2)), Some("formal only"));
     }
 
     #[test]

@@ -134,10 +134,7 @@ pub fn story(problem: &WordProblem) -> Result<Story, Vec<String>> {
     let text = fill_in(&problem.text, a, b);
     let formal = problem.formal.as_ref().map(|f| fill_in(f, a, b));
     Ok(Story {
-        look: problem.look,
-        stage: problem.stage,
-        a,
-        b,
+        id: problem.id.clone(),
         note: note(&problem.id, &text, formal.as_deref())?,
     })
 }
