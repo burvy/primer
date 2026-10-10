@@ -4,6 +4,7 @@
 //! together). The list is a `const`: fixed when the program is built, shared
 //! everywhere, never changed while running.
 
+use super::pattern::Pattern;
 use super::problem::Op;
 
 /// How a problem is *shown*: counters, a number line, or the bare equation.
@@ -56,6 +57,7 @@ pub enum Regroup {
 /// of at the end (`3 + 4 = box`). `stages` lists how the chapter is shown, in
 /// order. `requires` lists earlier skill ids to master first. `words` lists
 /// the vocabulary ids this chapter teaches (see `content/words.toml`).
+/// `patterns` lists the shapes generated sets may take (see `pattern.rs`).
 /// `track` is always `Track::Core` in version 1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Skill {
@@ -73,6 +75,7 @@ pub struct Skill {
     pub stages: &'static [Stage],
     pub requires: &'static [&'static str],
     pub words: &'static [&'static str],
+    pub patterns: &'static [Pattern],
     pub track: Track,
 }
 
@@ -141,6 +144,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &[],
         words: &["successor", "function"],
+        patterns: &[Pattern::Successor],
         track: Track::Core,
     },
     Skill {
@@ -157,7 +161,15 @@ pub const SKILLS: &[Skill] = &[
         missing_addend: false,
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["count-on-within-5"],
-        words: &["sum", "addend", "equation", "equals", "commutative", "doubles"],
+        words: &[
+            "sum",
+            "addend",
+            "equation",
+            "equals",
+            "commutative",
+            "doubles",
+        ],
+        patterns: &[Pattern::Successor, Pattern::Swap, Pattern::Doubles],
         track: Track::Core,
     },
     Skill {
@@ -175,6 +187,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
         words: &["unknown", "fact-family"],
+        patterns: &[Pattern::Family],
         track: Track::Core,
     },
     Skill {
@@ -192,6 +205,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
         words: &["number-bond", "compensation"],
+        patterns: &[Pattern::BondWalk { total: 10 }],
         track: Track::Core,
     },
     Skill {
@@ -209,6 +223,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10"],
         words: &["difference", "predecessor", "inverse"],
+        patterns: &[Pattern::Predecessor, Pattern::Undo],
         track: Track::Core,
     },
     Skill {
@@ -226,6 +241,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["add-within-10", "make-ten"],
         words: &["ones", "tens", "place-value"],
+        patterns: &[Pattern::Parallel { op: Op::Add }],
         track: Track::Core,
     },
     Skill {
@@ -243,6 +259,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-10"],
         words: &["pattern"],
+        patterns: &[Pattern::Parallel { op: Op::Sub }],
         track: Track::Core,
     },
     Skill {
@@ -260,6 +277,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["make-ten", "add-within-20-no-carry"],
         words: &["bridge-through-ten", "near-doubles"],
+        patterns: &[Pattern::Bridge, Pattern::NearDoubles],
         track: Track::Core,
     },
     Skill {
@@ -277,6 +295,7 @@ pub const SKILLS: &[Skill] = &[
         stages: &[Stage::Pictorial, Stage::NumberLine, Stage::Abstract],
         requires: &["subtract-within-20-no-borrow", "make-ten"],
         words: &["bridge-back-through-ten"],
+        patterns: &[Pattern::BridgeBack],
         track: Track::Core,
     },
 ];
@@ -395,8 +414,7 @@ mod tests {
         // that merely land on exactly 10 (chapters 2 and 4) are making ten,
         // not crossing it, so they do not count.
         for skill in SKILLS {
-            let late = skill.id == "add-within-20-carry"
-                || skill.id == "subtract-within-20-borrow";
+            let late = skill.id == "add-within-20-carry" || skill.id == "subtract-within-20-borrow";
             assert_eq!(
                 skill.regroup == Regroup::With,
                 late,

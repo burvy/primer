@@ -7,11 +7,15 @@
 mod generate;
 mod look;
 mod mistake;
+mod pattern;
 mod problem;
+mod problem_set;
 mod skill;
 
 pub use generate::generate;
 pub use look::Look;
 pub use mistake::{MistakeKind, detect};
+pub use pattern::{Pattern, groups, walk};
 pub use problem::{Blank, Op, Problem};
+pub use problem_set::{MIN_LEN, ProblemSet, SET_LEN, generate_set};
 pub use skill::{Regroup, SKILLS, Skill, Stage, Track};
