@@ -3,6 +3,8 @@
 use leptos::prelude::*;
 use primer_api::ProblemDto;
 
+use crate::art;
+
 /// Shows `3 + 4 = □`, `3 + □ = 7` or `□ + 4 = 7`, depending on where the box
 /// sits. `typed` is a *signal*: a value the page watches. Whenever it changes,
 /// only the box is redrawn.
@@ -37,6 +39,8 @@ pub fn Equation(problem: ProblemDto, #[prop(into)] typed: Signal<String>) -> imp
 /// `highlight` is `"addends"` (the numbers being added), `"equals"` (the `=`
 /// sign) or `"answer"` (what follows `=`). Each word of the label is wrapped
 /// in a `<span>`; the lit ones get the class `hl`, which `play.css` styles.
+/// If `assets/lessons/highlights.svg` exists, a hand-drawn stroke is drawn
+/// over each lit word instead (see [`Stroke`]).
 #[component]
 pub fn LabelEquation(label: String, highlight: Option<String>) -> impl IntoView {
     let words: Vec<String> = label.split(' ').map(String::from).collect();
@@ -53,10 +57,36 @@ pub fn LabelEquation(label: String, highlight: Option<String>) -> impl IntoView 
                 _ => "",
             };
             let lit = highlight.as_deref() == Some(kind);
-            view! { <span class:hl=lit>{word}" "</span> }
+            let stroke = lit.then(|| view! { <Stroke kind=kind /> });
+            view! { <span class:hl=lit>{word}{stroke}" "</span> }
         })
         .collect_view();
     view! { <p class="equation">{parts}</p> }
+}
+
+/// A hand-drawn stroke laid over the word it marks: a bracket under the
+/// addends, an underline for the `=` sign, a circle round the answer.
+///
+/// The drawing `highlights.svg` holds four layers (`circle`, `underline`,
+/// `arrow`, `bracket`). This stretches it over the word and `play.css` shows
+/// just the layer that fits and draws it on, stroke by stroke. With no file
+/// this draws nothing, and the word keeps its plain colour and underline.
+#[component]
+fn Stroke(kind: &'static str) -> impl IntoView {
+    let art = art::drawing("lessons/highlights.svg");
+    let layer = match kind {
+        "addends" => "bracket",
+        "equals" => "underline",
+        _ => "circle",
+    };
+    move || {
+        art.get().map(|svg| {
+            view! {
+                <svg class=format!("mark-stroke show-{layer}") viewBox="0 0 400 400"
+                    preserveAspectRatio="none" inner_html=art::inner(&svg)></svg>
+            }
+        })
+    }
 }
 
 /// A sentence from the server. The server has already escaped the words and

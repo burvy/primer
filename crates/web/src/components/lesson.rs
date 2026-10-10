@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use primer_api::BeatDto;
 use primer_core::Look;
 
+use crate::art;
 use crate::audio;
 
 use super::equation::{LabelEquation, RichText};
@@ -29,6 +30,7 @@ fn Picture(beat: BeatDto) -> impl IntoView {
                 output=beat.output
                 highlight=beat.highlight.clone()
                 open=beat.open.unwrap_or(false)
+                label=beat.label.clone()
             />
         }
         .into_any(),
@@ -38,6 +40,7 @@ fn Picture(beat: BeatDto) -> impl IntoView {
                 output=beat.output
                 highlight=beat.highlight.clone()
                 open=beat.open.unwrap_or(false)
+                label=beat.label.clone()
             />
         }
         .into_any(),
@@ -64,6 +67,22 @@ fn Picture(beat: BeatDto) -> impl IntoView {
         .into_any(),
         other => view! { <p class="note">{format!("[picture \"{other}\" not drawn yet]")}</p> }
             .into_any(),
+    }
+}
+
+/// Ada, the narrator. The hand-drawn `assets/lessons/ada.svg` if the file
+/// exists, else the silhouette from the stylesheet. In the drawing, `play.css`
+/// blinks her (`eyes-open` / `eyes-closed`) and opens her mouth (`mouth-open`)
+/// while `<body>` has the class `speaking`. Tapping her reads the line again.
+#[component]
+fn Ada(#[prop(into)] on_tap: Callback<()>) -> impl IntoView {
+    let art = art::drawing("lessons/ada.svg");
+    view! {
+        <div class="ada" class:has-art=move || art.get().is_some()
+            role="button" tabindex="0"
+            aria-label="Ada, the narrator. Tap to hear her again."
+            inner_html=move || art.get().unwrap_or_default()
+            on:click=move |_| on_tap.run(())></div>
     }
 }
 
@@ -109,18 +128,19 @@ pub fn LessonPage(
 
     view! {
         <div class="lesson">
-            <div class="ada" role="button" tabindex="0"
-                aria-label="Ada, the narrator. Tap to hear her again."
-                on:click=move |_| read_aloud(step.get_untracked(), look.get_untracked())></div>
+            <Ada on_tap=move |()| read_aloud(step.get_untracked(), look.get_untracked()) />
             {move || {
                 let beat = beats.with_value(|all| all.get(step.get()).cloned()).unwrap_or_default();
                 let text = match (look.get(), &beat.formal) {
                     (Look::Exceptional, Some(formal)) => formal.clone(),
                     _ => beat.text.clone(),
                 };
+                // `leaf` plays the page-turn each time a new beat is drawn.
                 view! {
-                    <Picture beat=beat />
-                    <p><RichText text=text /></p>
+                    <div class="leaf">
+                        <Picture beat=beat />
+                        <p><RichText text=text /></p>
+                    </div>
                 }
             }}
             <button type="button" class="next" on:click=move |_| {

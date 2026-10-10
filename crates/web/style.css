@@ -49,53 +49,52 @@
   --turn-ms: 350ms;
 }
 
-/* Gentle: warm illustrated storybook. Cream paper, warm ink, serif body. */
+/* The palette is locked in docs/PALETTE.md. Both looks define the SAME seven
+ * names, so every rule below can use them and one drawing serves both looks:
+ *
+ *   --paper  --paper-shade  --ink  --ink-soft  --warm  --bright  --mark
+ *
+ * Gentle (Parchment) has seven colours. Exceptional (Byrne's Euclid) has
+ * five, so two names share a colour: paper-shade is paper, ink-soft is ink,
+ * and warm, bright and mark become blue, yellow and red. Nothing outside the
+ * palette may be written as a colour in any stylesheet; shadows are mixed
+ * from the palette with color-mix. */
+
+/* Gentle: Parchment. A warm illustrated storybook, serif body. */
 [data-look="gentle"] {
-  --paper: #faf3e3;
-  --paper-edge: #e8dcc0;
-  --ink: #4a3b2a;
-  --ink-soft: #7a6a55;
-  --accent: #b3541e;
-  --accent-ink: #fff8ec;
-  --frame: #8a6f4d;
-  --good: #3e7d46;
-  --kind: #a83232;
+  --paper: #f4e9d0;
+  --paper-shade: #e6d5b0;
+  --ink: #3b2a1e;
+  --ink-soft: #7a6450;
+  --warm: #b07a4a;
+  --bright: #d9a441;
+  --mark: #a63d2f;
 
   --heading-font: var(--font-display);
   --body-font: var(--font-body);
   --maths-font: var(--font-maths);
 
-  --page-shadow: 0 2px 12px rgb(74 59 42 / 0.18);
-  --key-face: #fffdf6;
-  --key-edge: #d8c9a8;
+  --page-shadow: 0 2px 12px color-mix(in srgb, var(--ink) 25%, transparent);
 }
 
-/* Exceptional: after Oliver Byrne's 1847 coloured Euclid. Cream paper, flat
- * red / yellow / blue shapes, black ink, classic serif headings. */
+/* Exceptional: after Oliver Byrne's 1847 coloured Euclid. Cream paper, black
+ * ink, flat red, yellow and blue. */
 [data-look="exceptional"] {
-  --paper: #f6f0dd;
-  --paper-edge: #d9cfae;
-  --ink: #1a1a1a;
-  --ink-soft: #4d4d4d;
-  --accent: #d2232a;
-  --accent-ink: #f6f0dd;
-  --frame: #1a1a1a;
-  --good: #1f5fa8;
-  --kind: #d2232a;
+  --paper: #f3ebd6;
+  --paper-shade: #f3ebd6;
+  --ink: #1e1a16;
+  --ink-soft: #1e1a16;
+  --warm: #1f4e8c;
+  --bright: #e3a72f;
+  --mark: #c8321e;
 
   --texture-paper: url("../../assets/textures/paper-exceptional.svg");
 
-  --byrne-red: #d2232a;
-  --byrne-yellow: #f4b400;
-  --byrne-blue: #1f5fa8;
-
   --heading-font: var(--font-display);
   --body-font: var(--font-body);
   --maths-font: var(--font-maths);
 
-  --page-shadow: 0 2px 0 var(--frame), 0 2px 12px rgb(26 26 26 / 0.2);
-  --key-face: #f6f0dd;
-  --key-edge: #1a1a1a;
+  --page-shadow: 0 2px 0 var(--ink), 0 2px 12px color-mix(in srgb, var(--ink) 25%, transparent);
 }
 
 /* The book page: paper texture, readable type, centred column. */
@@ -108,7 +107,7 @@
   max-width: var(--page-max-width);
   margin: 0 auto;
   padding: var(--page-padding);
-  border: 2px solid var(--frame);
+  border: 2px solid var(--ink);
   border-radius: var(--corner);
   box-shadow: var(--page-shadow);
 }
@@ -125,7 +124,7 @@
 [data-look="exceptional"] .proposition::before {
   content: "Proposition " counter(proposition, upper-roman) ". ";
   counter-increment: proposition;
-  color: var(--byrne-red);
+  color: var(--mark);
 }
 .book {
   counter-reset: proposition;
@@ -160,9 +159,9 @@
   height: var(--key-size);
   font-family: var(--maths-font);
   font-size: 1.5rem;
-  background: var(--key-face);
+  background: var(--paper);
   color: var(--ink);
-  border: 2px solid var(--key-edge);
+  border: 2px solid var(--ink-soft);
   border-radius: var(--corner);
 }
 
@@ -176,15 +175,6 @@
   height: 2rem;
   background: var(--texture-ornament) center / contain no-repeat;
   margin: var(--gap) 0;
-}
-
-/* Page turn: the old page fades and slides like paper lifting. */
-.page-turn {
-  transition: opacity var(--turn-ms) ease, transform var(--turn-ms) ease;
-}
-.page-turn.leaving {
-  opacity: 0;
-  transform: translateX(-2rem) rotateY(8deg);
 }
 
 /* Roomier layout on a Chromebook-width screen. */

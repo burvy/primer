@@ -1530,6 +1530,7 @@ dependencies = [
  "primer-core",
  "serde",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

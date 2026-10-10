@@ -22,7 +22,7 @@ use std::path::Path;
 
 use primer_api::BeatDto;
 use primer_core::policy::{Chapter, Step};
-use primer_core::{Look, Skill};
+use primer_core::{Look, SKILLS, Skill};
 
 pub use check::ContentError;
 use schema::{ChapterFile, LookTag, WordsFile};
@@ -35,6 +35,8 @@ pub struct Content {
     exceptional: Vec<Chapter>,
     /// Beats of every lesson, found by (skill id, lesson id).
     lessons: HashMap<(String, String), Vec<BeatDto>>,
+    /// For each skill: its first lesson's id and the chapter's title.
+    openers: HashMap<String, (String, String)>,
     /// What is not written yet. Not errors: the server prints them at start.
     pub gaps: Vec<String>,
     /// Every line Ada reads aloud, in book order: the list for the voice actor.
@@ -55,6 +57,14 @@ impl Content {
         self.lessons
             .get(&(skill.to_string(), lesson.to_string()))
             .map_or(&[], Vec::as_slice)
+    }
+
+    /// The opener page for `lesson`, if it is the first lesson of its
+    /// chapter: the chapter's number (from 1, in ladder order) and title.
+    pub fn opener(&self, skill: &str, lesson: &str) -> Option<(u32, &str)> {
+        let (first, title) = self.openers.get(skill)?;
+        let number = SKILLS.iter().position(|s| s.id == skill)? + 1;
+        (first == lesson).then_some((number as u32, title.as_str()))
     }
 
     /// Reads every `.toml` file in `dir` and checks it all.
@@ -122,6 +132,7 @@ impl Content {
             gentle: built.chapters(Look::Gentle),
             exceptional: built.chapters(Look::Exceptional),
             lessons: built.lessons,
+            openers: built.openers,
             gaps: check::coverage(&chapters, words.as_ref()),
             lines,
         })
@@ -156,6 +167,7 @@ struct Pending {
 struct Built {
     pending: Vec<Pending>,
     lessons: HashMap<(String, String), Vec<BeatDto>>,
+    openers: HashMap<String, (String, String)>,
 }
 
 impl Built {
@@ -177,6 +189,10 @@ impl Built {
         };
         let mut steps = Vec::new();
         let mut lines = Vec::new();
+        if let Some(first) = chapter.lesson.first() {
+            let opener = (first.get_ref().id.clone(), chapter.title.clone());
+            self.openers.insert(skill.id.to_string(), opener);
+        }
 
         for lesson in &chapter.lesson {
             let (start, lesson) = (lesson.span().start, lesson.get_ref());
@@ -527,6 +543,17 @@ when = "adds-1"
         // The beat carries the same name for the page.
         let voice = content.beats("count-on-within-5", "second")[0].voice.clone().unwrap();
         assert_eq!(voice.gentle.name, "second.1.1.gentle");
+    }
+
+    #[test]
+    fn only_a_chapters_first_lesson_has_an_opener() {
+        let content = load(&[("01-count-on.toml", CH1)]).unwrap();
+        assert_eq!(
+            content.opener("count-on-within-5", "first"),
+            Some((1, "The Next Number"))
+        );
+        assert_eq!(content.opener("count-on-within-5", "second"), None);
+        assert_eq!(content.opener("add-within-10", "first"), None);
     }
 
     #[test]

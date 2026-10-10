@@ -99,6 +99,15 @@ impl Default for AudioSettings {
     }
 }
 
+/// The page that opens a chapter: shown before the chapter's first lesson.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OpenerDto {
+    /// Which chapter of the book this is, counting from 1.
+    pub number: u32,
+    /// The chapter's title, as the writer gave it.
+    pub title: String,
+}
+
 /// What the child sees next. `#[serde(tag = "type")]` writes the variant name
 /// into the JSON as `"type": "practice"`, so the browser can tell them apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,6 +120,8 @@ pub enum PageDto {
         again: bool,
         /// The lesson, one tap at a time.
         beats: Vec<BeatDto>,
+        /// Set when this is a chapter's first lesson: the page shown first.
+        opener: Option<OpenerDto>,
     },
     Practice {
         /// Send this back with the answer, so a stale page is noticed.

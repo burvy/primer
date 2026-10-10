@@ -8,12 +8,13 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{AnswerRequest, AudioSettings, PageDto, ProblemDto};
+use primer_api::{AnswerRequest, AudioSettings, OpenerDto, PageDto, ProblemDto};
 use primer_core::{Input, Key, Look, press};
 
 use crate::api;
 use crate::audio;
 use crate::components::audio_controls::AudioControls;
+use crate::components::book::{ChapterOpener, Cover};
 use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
 use crate::components::lesson::LessonPage;
@@ -27,6 +28,10 @@ enum Screen {
     Loading,
     Failed(String),
     Page(PageDto),
+    /// The cover, before the very first lesson. `0` is the lesson page behind it.
+    Cover(PageDto),
+    /// A chapter's opening page, before its first lesson.
+    Opener(PageDto),
     /// Shown after an answer; `next` is where "Continue" goes.
     Feedback {
         correct: bool,
@@ -34,11 +39,38 @@ enum Screen {
     },
 }
 
-/// Turns the result of a call into the next screen.
+/// Turns the result of a call into the next screen. A lesson that starts a
+/// chapter shows the chapter's opening page first.
 fn show(result: Result<PageDto, String>) -> Screen {
     match result {
+        Ok(page @ PageDto::Lesson { opener: Some(_), .. }) => Screen::Opener(page),
         Ok(page) => Screen::Page(page),
         Err(message) => Screen::Failed(message),
+    }
+}
+
+/// Like [`show`], but for the first page of a visit: the very first chapter
+/// is preceded by the cover.
+fn show_first(result: Result<PageDto, String>) -> Screen {
+    match show(result) {
+        Screen::Opener(page @ PageDto::Lesson { opener: Some(OpenerDto { number: 1, .. }), .. }) => {
+            Screen::Cover(page)
+        }
+        other => other,
+    }
+}
+
+/// The same lesson without its opener: the page after the opener is turned.
+fn without_opener(page: PageDto) -> PageDto {
+    match page {
+        PageDto::Lesson { skill, lesson, again, beats, .. } => PageDto::Lesson {
+            skill,
+            lesson,
+            again,
+            beats,
+            opener: None,
+        },
+        other => other,
     }
 }
 
@@ -74,11 +106,18 @@ pub fn App() -> impl IntoView {
 
     // Start in Gentle, and tell the server so both sides agree. (Remembering
     // the look per child arrives with child profiles, slice 10.)
-    spawn_local(async move { screen.set(show(api::set_look(word(Look::Gentle)).await)) });
+    spawn_local(async move { screen.set(show_first(api::set_look(word(Look::Gentle)).await)) });
 
+    // Switching looks keeps the child on the page they are reading, so it
+    // never goes back to an opener.
     let on_switch = move |to: Look| {
         look.set(to);
-        spawn_local(async move { screen.set(show(api::set_look(word(to)).await)) });
+        spawn_local(async move {
+            screen.set(match api::set_look(word(to)).await {
+                Ok(page) => Screen::Page(page),
+                Err(message) => Screen::Failed(message),
+            })
+        });
     };
 
     view! {
@@ -86,31 +125,56 @@ pub fn App() -> impl IntoView {
             <BookPage>
                 <LookSwitch look=look on_switch=on_switch />
                 <AudioControls settings=sound on_change=on_sound />
-                {move || match screen.get() {
-                    Screen::Loading => view! { <p class="note">"Opening the book…"</p> }.into_any(),
-                    Screen::Failed(message) => {
-                        view! { <p class="note">{format!("Something went wrong: {message}")}</p> }
-                            .into_any()
-                    }
-                    Screen::Feedback { correct, next } => view! { <Feedback correct next screen /> }.into_any(),
-                    Screen::Page(PageDto::Lesson { skill, lesson, beats, .. }) => {
-                        let on_done = move |()| {
-                            let (skill, lesson) = (skill.clone(), lesson.clone());
-                            spawn_local(async move {
-                                screen.set(show(api::lesson_seen(&skill, &lesson).await));
-                            });
-                        };
-                        view! { <LessonPage beats look on_done /> }.into_any()
-                    }
-                    Screen::Page(PageDto::Practice { page_id, problem, stage, .. }) => {
-                        view! { <Practice page_id problem stage screen /> }.into_any()
-                    }
-                    Screen::Page(PageDto::Story) => {
-                        view! { <p>"The end of this part of the book."</p> }.into_any()
-                    }
+                // A fresh `leaf` for every screen turns the page. A lesson draws
+                // its own leaf for each beat, so it is left out here.
+                {move || {
+                    let now = screen.get();
+                    let turns = !matches!(&now, Screen::Page(PageDto::Lesson { .. }));
+                    view! { <div class:leaf=turns>{screen_view(now, screen, look)}</div> }
                 }}
             </BookPage>
         </div>
+    }
+}
+
+/// What one screen looks like.
+fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>) -> AnyView {
+    match now {
+    Screen::Loading => view! { <p class="note">"Opening the book…"</p> }.into_any(),
+    Screen::Failed(message) => {
+        view! { <p class="note">{format!("Something went wrong: {message}")}</p> }
+            .into_any()
+    }
+    Screen::Feedback { correct, next } => view! { <Feedback correct next screen /> }.into_any(),
+    Screen::Cover(page) => {
+        let on_open = move |()| screen.set(show(Ok(page.clone())));
+        view! { <Cover on_open /> }.into_any()
+    }
+    Screen::Opener(page) => {
+        match page.clone() {
+            PageDto::Lesson { opener: Some(opener), .. } => {
+                let on_begin =
+                    move |()| screen.set(Screen::Page(without_opener(page.clone())));
+                view! { <ChapterOpener opener on_begin /> }.into_any()
+            }
+            _ => ().into_any(),
+        }
+    }
+    Screen::Page(PageDto::Lesson { skill, lesson, beats, .. }) => {
+        let on_done = move |()| {
+            let (skill, lesson) = (skill.clone(), lesson.clone());
+            spawn_local(async move {
+                screen.set(show(api::lesson_seen(&skill, &lesson).await));
+            });
+        };
+        view! { <LessonPage beats look on_done /> }.into_any()
+    }
+    Screen::Page(PageDto::Practice { page_id, problem, stage, .. }) => {
+        view! { <Practice page_id problem stage screen /> }.into_any()
+    }
+    Screen::Page(PageDto::Story) => {
+        view! { <p>"The end of this part of the book."</p> }.into_any()
+    }
     }
 }
 

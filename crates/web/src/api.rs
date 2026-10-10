@@ -56,8 +56,11 @@ pub async fn set_audio(settings: &AudioSettings) -> Result<AudioSettings, String
     read(post("audio", settings)?).await
 }
 
-/// Fetches a text file such as an SVG drawing.
+/// Fetches a text file such as an SVG drawing. A missing file is an `Err`.
 pub async fn text(path: &str) -> Result<String, String> {
     let response = Request::get(path).send().await.map_err(|e| e.to_string())?;
+    if !response.ok() {
+        return Err(format!("no file {path}"));
+    }
     response.text().await.map_err(|e| e.to_string())
 }

@@ -20,8 +20,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use primer_api::{
-    AnswerRequest, AnswerResponse, AudioSettings, LessonSeenRequest, LookRequest, PageDto,
-    ProblemDto,
+    AnswerRequest, AnswerResponse, AudioSettings, LessonSeenRequest, LookRequest, OpenerDto,
+    PageDto, ProblemDto,
 };
 use primer_core::policy;
 use primer_core::{Attempt, Event, Learner, Outcome, Page, Problem, Strategy, detect};
@@ -277,6 +277,14 @@ fn page_dto(page: &Page, learner: &Learner, content: &Content) -> PageDto {
             lesson: lesson.clone(),
             again: *again,
             beats: content.beats(skill, lesson).to_vec(),
+            // A lesson offered again after a struggle needs no new chapter page.
+            opener: content
+                .opener(skill, lesson)
+                .filter(|_| !again)
+                .map(|(number, title)| OpenerDto {
+                    number,
+                    title: title.to_string(),
+                }),
         },
         Page::Practice {
             skill,
