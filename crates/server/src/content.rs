@@ -11,19 +11,19 @@
 //! reads the folder; [`Content::from_sources`] does everything else from
 //! plain text, so tests need no files.
 
-mod check;
+pub mod check;
 mod convert;
 pub mod feedback;
 mod math;
-mod schema;
+pub mod schema;
 pub mod voice;
 
 use std::collections::HashMap;
 use std::path::Path;
 
 use primer_api::{BeatDto, NoteDto, SetEndDto};
-use primer_core::policy::{Chapter, Step};
-use primer_core::{Blank, Look, MistakeKind, Op, Problem, SKILLS, Skill, Stage};
+use primer_core::policy::{self, Chapter, Step};
+use primer_core::{Look, MistakeKind, Problem, SKILLS, Skill, Stage};
 use rand::Rng;
 
 pub use check::ContentError;
@@ -90,16 +90,13 @@ impl Content {
         Some(found.note.clone())
     }
 
-    /// The story to tell for `problem` at `stage`, if the book has a word
-    /// problem for this very sum at this stage. Only a sum with its answer
-    /// missing has a story.
-    pub fn story(&self, skill: &str, look: Look, stage: Stage, problem: &Problem) -> Option<NoteDto> {
-        if problem.op() != Op::Add || problem.blank() != Blank::Answer {
-            return None;
-        }
+    /// The words of the story on a practice page, if the page is a story:
+    /// the policy gives story pages a set id made by
+    /// [`story_set_id`](primer_core::policy::story_set_id).
+    pub fn story(&self, skill: &str, set_id: &str) -> Option<NoteDto> {
+        let id = primer_core::policy::story_id(set_id)?;
         let stories = &self.sayings.get(skill)?.stories;
-        let sum = (problem.a(), problem.b());
-        let found = feedback::pick_story(stories, look, stage_tag(stage), sum)?;
+        let found = stories.iter().find(|story| story.id == id)?;
         Some(found.note.clone())
     }
 
@@ -317,6 +314,15 @@ impl Built {
                 }
                 Err(messages) => report(&problem.id, messages),
             }
+            // The policy tells each story once, at its stage. Stories have
+            // no place among the lessons and sets (`usize::MAX` sorts them
+            // last); a sum or stage that does not fit was reported above.
+            let sum = Problem::new(problem.a, skill.op, problem.b);
+            let stage = skill.stages.iter().find(|&&s| stage_tag(s) == problem.stage);
+            if let (Some(problem_), Some(&stage)) = (sum, stage) {
+                let story = policy::Story { id: problem.id.clone(), problem: problem_, stage };
+                steps.push((usize::MAX, problem.look, Step::Story(story)));
+            }
         }
         for hint in &chapter.hint {
             match convert::hint(hint) {
@@ -468,6 +474,7 @@ when = "adds-1"
             .map(|s| match s {
                 Step::Lesson(id) => format!("lesson:{id}"),
                 Step::Set(set) => format!("set:{}", set.id),
+                Step::Story(story) => format!("story:{}", story.id),
             })
             .collect()
     }
@@ -477,7 +484,8 @@ when = "adds-1"
         let content = load(&[("01-count-on.toml", CH1)]).unwrap();
         assert_eq!(
             ids(&content.chapters(Look::Exceptional)[0].steps),
-            ["lesson:first", "set:walk", "lesson:second", "set:grown-up-only"]
+            // The word problem has no place among them: it comes last.
+            ["lesson:first", "set:walk", "lesson:second", "set:grown-up-only", "story:stones"]
         );
     }
 
@@ -486,7 +494,7 @@ when = "adds-1"
         let content = load(&[("01-count-on.toml", CH1)]).unwrap();
         assert_eq!(
             ids(&content.chapters(Look::Gentle)[0].steps),
-            ["lesson:first", "set:walk", "lesson:second"]
+            ["lesson:first", "set:walk", "lesson:second", "story:stones"]
         );
     }
 

@@ -2,8 +2,8 @@
 //!
 //! `next` is a pure function. The same learner, content, look and seed always
 //! give the same page, so every rule below can be tested with a plain list of
-//! events. The content (lessons and written sets) is passed in as data; the
-//! server loads it from the content files.
+//! events. The content (lessons, written sets and word problems) is passed in
+//! as data; the server loads it from the content files.
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -25,6 +25,32 @@ pub enum Step {
     /// A lesson, by its id in the content file.
     Lesson(String),
     Set(ProblemSet),
+    /// A word problem: one sum told as a story, at its own stage.
+    Story(Story),
+}
+
+/// A written word problem, as the policy sees it: which sum, at which stage.
+/// The words of the story stay with the server, found by `id`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Story {
+    pub id: String,
+    pub problem: Problem,
+    pub stage: Stage,
+}
+
+/// Story pages use `story:<id>` as their set id, so an answer to a story is
+/// never mistaken for an answer in a set.
+const STORY_PREFIX: &str = "story:";
+
+/// The set id of a story's page.
+pub fn story_set_id(story_id: &str) -> String {
+    format!("{STORY_PREFIX}{story_id}")
+}
+
+/// The story id inside a story page's set id, or `None` for a set's page.
+/// `strip_prefix` gives back the rest of the text only if it starts so.
+pub fn story_id(set_id: &str) -> Option<&str> {
+    set_id.strip_prefix(STORY_PREFIX)
 }
 
 /// A chapter's written content: lessons and sets in order. A chapter may
@@ -46,6 +72,11 @@ pub struct Chapter {
 /// 4. Written sets used up: a generated set (built from `seed`, so the same
 ///    set comes back on every call until it is finished).
 ///
+/// Word problems wait for their stage. When the child is at a story's stage
+/// and has not heard it yet, it comes before the next problem (3 or 4), even
+/// in the middle of a set. Every chapter walks through each of its stages,
+/// so every story in the child's look is told once.
+///
 /// `seed` is fixed per child (the server derives it from their id).
 pub fn next(learner: &Learner, chapters: &[Chapter], look: Look, seed: u64) -> Page {
     let Some(skill) = SKILLS
@@ -61,24 +92,60 @@ pub fn next(learner: &Learner, chapters: &[Chapter], look: Look, seed: u64) -> P
     // `find_map` walks the steps and gives back the first lesson id it finds.
     let first_lesson = steps.iter().find_map(|step| match step {
         Step::Lesson(id) => Some(id),
-        Step::Set(_) => None,
+        _ => None,
     });
     if learner.progress(skill.id).step_backs >= 2
         && let Some(first) = first_lesson
     {
         return lesson(skill, first, true);
     }
+    let story = untold_story(learner, skill, steps);
     for step in steps {
         match step {
             Step::Lesson(id) if !learner.lessons_seen.contains(&(skill.id, id.clone())) => {
                 return lesson(skill, id, false);
             }
-            Step::Set(set) if !finished(learner, set) => return practice(learner, skill, set),
+            Step::Set(set) if !finished(learner, set) => {
+                return story.map_or_else(
+                    || practice(learner, skill, set),
+                    |s| tell(learner, skill, s),
+                );
+            }
             _ => {}
         }
     }
+    if let Some(story) = story {
+        return tell(learner, skill, story);
+    }
     let set = generated(learner, skill, steps, look, seed);
     practice(learner, skill, &set)
+}
+
+/// The first story written for the child's current stage that they have not
+/// been told yet.
+fn untold_story<'a>(learner: &Learner, skill: &Skill, steps: &'a [Step]) -> Option<&'a Story> {
+    let stage = skill.stages.get(learner.progress(skill.id).stage)?;
+    steps.iter().find_map(|step| match step {
+        Step::Story(story)
+            if story.stage == *stage && answered(learner, &story_set_id(&story.id)) == 0 =>
+        {
+            Some(story)
+        }
+        _ => None,
+    })
+}
+
+/// A story's page: its one sum, at the stage it was written for.
+fn tell(learner: &Learner, skill: &'static Skill, story: &Story) -> Page {
+    Page::Practice {
+        skill: skill.id,
+        set_id: story_set_id(&story.id),
+        problem: story.problem,
+        stage: story.stage,
+        hint: learner.progress(skill.id).hint,
+        easier: false,
+        nudge: nudge(learner.strategy, skill),
+    }
 }
 
 fn lesson(skill: &Skill, id: &str, again: bool) -> Page {
@@ -469,5 +536,72 @@ mod tests {
         assert_eq!(one, two);
         let page = |learner| next(learner, &chapters(), Look::Gentle, SEED);
         assert_eq!(page(&one), page(&two));
+    }
+
+    /// Chapter 1 plus a word problem written for the number-line stage.
+    fn with_story() -> Vec<Chapter> {
+        let mut chapters = chapters();
+        let story = Story {
+            id: "tower".into(),
+            problem: Problem::new(2, Op::Add, 1).unwrap(),
+            stage: Stage::NumberLine,
+        };
+        chapters[0].steps.push(Step::Story(story));
+        chapters
+    }
+
+    /// Plays with `chapters` until `answers` problems are answered right,
+    /// returning every page shown.
+    fn walk(chapters: &[Chapter], answers: usize) -> Vec<Page> {
+        let (mut events, mut pages) = (Vec::new(), Vec::new());
+        while pages
+            .iter()
+            .filter(|p| matches!(p, Page::Practice { .. }))
+            .count()
+            < answers
+        {
+            let page = next(&Learner::from_events(&events), chapters, Look::Gentle, SEED);
+            events.push(respond(&page, Look::Gentle, Outcome::Correct));
+            pages.push(page);
+        }
+        pages
+    }
+
+    #[test]
+    fn a_story_waits_for_its_stage_then_comes_once_in_the_middle_of_a_set() {
+        let pages = walk(&with_story(), 9);
+        let told: Vec<usize> = (0..pages.len())
+            .filter(|&i| matches!(&pages[i], Page::Practice { set_id, .. } if story_id(set_id) == Some("tower")))
+            .collect();
+        assert_eq!(told.len(), 1, "told exactly once");
+        let Page::Practice { stage, problem, .. } = &pages[told[0]] else {
+            unreachable!()
+        };
+        assert_eq!(
+            (*stage, problem.to_string().as_str()),
+            (Stage::NumberLine, "2 + 1")
+        );
+        // Three right answers at the pictures stage come first (Gentle).
+        let before = pages[..told[0]]
+            .iter()
+            .filter(|p| matches!(p, Page::Practice { .. }))
+            .count();
+        assert_eq!(before, 3);
+    }
+
+    #[test]
+    fn a_story_does_not_count_as_a_set() {
+        let pages = walk(&with_story(), 9);
+        let events: Vec<Event> = pages
+            .iter()
+            .map(|p| respond(p, Look::Gentle, Outcome::Correct))
+            .collect();
+        let learner = Learner::from_events(&events);
+        assert!(
+            !learner.sets_started[CH1]
+                .iter()
+                .any(|id| story_id(id).is_some())
+        );
+        assert_eq!(learner.answered.get(&story_set_id("tower")), Some(&1));
     }
 }

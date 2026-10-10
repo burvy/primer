@@ -12,21 +12,11 @@
 //! `primer-server voices` does not start the server: it makes placeholder
 //! recordings and writes `assets/voice/RECORDINGS.md` (see `voices.rs`).
 
-mod auth;
-mod children;
-mod config;
-mod content;
-mod db;
-mod jev;
-mod judge;
-mod names;
-mod routes;
-mod voices;
-
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use routes::AppState;
+use primer_server::routes::AppState;
+use primer_server::{config, content, db, jev, judge, routes, voices};
 
 /// `#[tokio::main]` turns `async fn main` into a normal `main` that starts
 /// tokio, the engine that runs async code, and waits for it to finish.
