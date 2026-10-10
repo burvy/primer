@@ -46,10 +46,6 @@ pub trait Judge: Send + Sync {
 
     /// Could this typed hero name identify a real child (a real person's
     /// name, a school, an address)? `true` means "refuse it".
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the hero-name page (slice 10) will call it")
-    )]
     async fn identifying(&self, hero_name: &str) -> bool;
 
     /// Names the slip in `given`, or `Unknown` if it cannot.
