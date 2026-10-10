@@ -9,6 +9,7 @@
 //! the pause may happen. The queries are checked when they run, not when the
 //! program compiles (that would need a database at build time).
 
+use primer_api::AudioSettings;
 use primer_core::{Attempt, Event, Look, Outcome, Problem, Skill, Strategy};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -66,6 +67,36 @@ pub async fn child(pool: &SqlitePool, id: &str) -> Result<Option<Child>, sqlx::E
 pub async fn set_look(pool: &SqlitePool, id: &str, look: Look) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE children SET look = ? WHERE id = ?")
         .bind(name(LOOKS, look))
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// What the child wants to hear. A missing child gives the defaults.
+pub async fn audio(pool: &SqlitePool, id: &str) -> Result<AudioSettings, sqlx::Error> {
+    let row = sqlx::query("SELECT narration, sounds, music FROM children WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    // SQLite has no true/false, so 0 and 1 are stored; `!= 0` turns one back.
+    Ok(row.map_or_else(AudioSettings::default, |row| AudioSettings {
+        narration: row.get::<i64, _>("narration") != 0,
+        sounds: row.get::<i64, _>("sounds") != 0,
+        music: row.get::<i64, _>("music") != 0,
+    }))
+}
+
+/// Remembers what the child wants to hear.
+pub async fn set_audio(
+    pool: &SqlitePool,
+    id: &str,
+    settings: AudioSettings,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE children SET narration = ?, sounds = ?, music = ? WHERE id = ?")
+        .bind(settings.narration)
+        .bind(settings.sounds)
+        .bind(settings.music)
         .bind(id)
         .execute(pool)
         .await?;

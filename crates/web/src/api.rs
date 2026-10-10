@@ -5,7 +5,9 @@
 //! Until sign-in exists (slice 9) there is one built-in child, `dev`.
 
 use gloo_net::http::{Request, RequestBuilder};
-use primer_api::{AnswerRequest, AnswerResponse, LessonSeenRequest, LookRequest, PageDto};
+use primer_api::{
+    AnswerRequest, AnswerResponse, AudioSettings, LessonSeenRequest, LookRequest, PageDto,
+};
 use serde::de::DeserializeOwned;
 
 const CHILD: &str = "/api/child/dev";
@@ -42,6 +44,16 @@ pub async fn lesson_seen(skill: &str, lesson: &str) -> Result<PageDto, String> {
 
 pub async fn set_look(look: &str) -> Result<PageDto, String> {
     read(post("look", &LookRequest { look: look.into() })?).await
+}
+
+/// What the child wants to hear.
+pub async fn audio() -> Result<AudioSettings, String> {
+    read(Request::get(&format!("{CHILD}/audio")).build().map_err(|e| e.to_string())?).await
+}
+
+/// Remembers what the child wants to hear.
+pub async fn set_audio(settings: &AudioSettings) -> Result<AudioSettings, String> {
+    read(post("audio", settings)?).await
 }
 
 /// Fetches a text file such as an SVG drawing.

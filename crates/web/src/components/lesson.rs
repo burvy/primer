@@ -4,6 +4,8 @@ use leptos::prelude::*;
 use primer_api::BeatDto;
 use primer_core::Look;
 
+use crate::audio;
+
 use super::equation::{LabelEquation, RichText};
 use super::pictures::{Counters, Machine, Machines, NumberLine, Pouches, Tower};
 
@@ -77,9 +79,39 @@ pub fn LessonPage(
     let step = RwSignal::new(0usize);
     let last = beats.len().saturating_sub(1);
     let beats = StoredValue::new(beats);
+
+    // Ada reads beat `at` aloud, in the line that fits the look: the
+    // `exceptional` one when the beat has it, else the `gentle` one.
+    let read_aloud = move |at: usize, look: Look| {
+        let Some(voice) = beats.with_value(|all| all.get(at).and_then(|b| b.voice.clone())) else {
+            return;
+        };
+        let line = match (look, voice.exceptional) {
+            (Look::Exceptional, Some(formal)) => formal,
+            _ => voice.gentle,
+        };
+        audio::say(&line.name, &line.speech);
+    };
+    // Each new beat is read, and gets its sound if its picture has one.
+    // The Effect re-runs when the beat or the look changes.
+    Effect::new(move |_| {
+        let at = step.get();
+        read_aloud(at, look.get());
+        let beat = beats.with_value(|all| all.get(at).cloned()).unwrap_or_default();
+        match beat.show.as_str() {
+            "pouches" if beat.join == Some(true) => audio::sound("coin"),
+            "number-line" if beat.hop.unwrap_or(0) > 0 => audio::sound("hop"),
+            _ => {}
+        }
+    });
+    // Leaving the lesson stops Ada mid-sentence.
+    on_cleanup(audio::stop);
+
     view! {
         <div class="lesson">
-            <div class="ada" role="img" aria-label="Ada, the narrator"></div>
+            <div class="ada" role="button" tabindex="0"
+                aria-label="Ada, the narrator. Tap to hear her again."
+                on:click=move |_| read_aloud(step.get_untracked(), look.get_untracked())></div>
             {move || {
                 let beat = beats.with_value(|all| all.get(step.get()).cloned()).unwrap_or_default();
                 let text = match (look.get(), &beat.formal) {
@@ -92,6 +124,7 @@ pub fn LessonPage(
                 }
             }}
             <button type="button" class="next" on:click=move |_| {
+                audio::sound("page-turn");
                 if step.get() >= last {
                     on_done.run(());
                 } else {

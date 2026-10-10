@@ -20,7 +20,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use primer_api::{
-    AnswerRequest, AnswerResponse, LessonSeenRequest, LookRequest, PageDto, ProblemDto,
+    AnswerRequest, AnswerResponse, AudioSettings, LessonSeenRequest, LookRequest, PageDto,
+    ProblemDto,
 };
 use primer_core::policy;
 use primer_core::{Attempt, Event, Learner, Outcome, Page, Problem, Strategy, detect};
@@ -42,14 +43,18 @@ pub struct AppState {
     pub content: Arc<Content>,
 }
 
-/// The whole app: the API under `/api`, and the built web app (`dist`)
-/// for every other address.
-pub fn router(state: AppState, dist: PathBuf) -> Router {
+/// The whole app: the API under `/api`, the `assets` folder under `/assets`,
+/// and the built web app (`dist`) for every other address.
+pub fn router(state: AppState, dist: PathBuf, assets: PathBuf) -> Router {
     Router::new()
         .route("/api/child/{id}/next", get(next_page))
         .route("/api/child/{id}/answer", post(answer))
         .route("/api/child/{id}/lesson-seen", post(lesson_seen))
         .route("/api/child/{id}/look", post(set_look))
+        .route("/api/child/{id}/audio", get(get_audio).post(set_audio))
+        // Recordings and sounds are read from the real `assets/` folder, so a
+        // file dropped in is heard at once, with no rebuild of the web app.
+        .nest_service("/assets", ServeDir::new(assets))
         .fallback_service(ServeDir::new(dist))
         .with_state(state)
 }
@@ -218,6 +223,30 @@ async fn set_look(
     Ok(Json(page_dto(&now.page, &now.learner, &state.content)))
 }
 
+/// `GET /api/child/{id}/audio`: what the child wants to hear.
+async fn get_audio(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<AudioSettings>, ApiError> {
+    db::child(&state.pool, &id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    Ok(Json(db::audio(&state.pool, &id).await?))
+}
+
+/// `POST /api/child/{id}/audio`: remember the three switches, reply with them.
+async fn set_audio(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<AudioSettings>,
+) -> Result<Json<AudioSettings>, ApiError> {
+    db::child(&state.pool, &id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    db::set_audio(&state.pool, &id, body).await?;
+    Ok(Json(body))
+}
+
 /// Names one problem of one set: the set id plus how many are already
 /// answered. It changes after every answer, so an old page cannot be
 /// answered twice.
@@ -318,7 +347,11 @@ problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1"]
             judge: Arc::new(FakeJudge),
             content: Arc::new(Content::from_sources(&book()).unwrap()),
         };
-        router(state, PathBuf::from("no-such-dist"))
+        router(
+            state,
+            PathBuf::from("no-such-dist"),
+            PathBuf::from("no-such-assets"),
+        )
     }
 
     /// Sends one request straight into the router (no network), the way
@@ -450,6 +483,33 @@ problems = ["0 + 1", "1 + 1", "2 + 1", "3 + 1"]
         let (status, _) =
             call::<AnswerResponse>(&app, Method::POST, "/api/child/kid/answer", Some(body)).await;
         assert_eq!(status, StatusCode::CONFLICT);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn audio_settings_start_at_the_defaults_and_are_remembered() {
+        let file = temp_db("audio");
+        let app = app(&file).await;
+        let (_, first) =
+            call::<AudioSettings>(&app, Method::GET, "/api/child/kid/audio", None).await;
+        assert_eq!(first, Some(AudioSettings::default()));
+        let wanted = AudioSettings {
+            narration: false,
+            sounds: true,
+            music: true,
+        };
+        let body = serde_json::to_value(wanted).unwrap();
+        call::<AudioSettings>(&app, Method::POST, "/api/child/kid/audio", Some(body)).await;
+
+        // "Restart": the same file opened again still has the choice.
+        drop(app);
+        let app = self::app(&file).await;
+        let (_, again) =
+            call::<AudioSettings>(&app, Method::GET, "/api/child/kid/audio", None).await;
+        assert_eq!(again, Some(wanted));
+        let (status, _) =
+            call::<AudioSettings>(&app, Method::GET, "/api/child/nobody/audio", None).await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
         let _ = std::fs::remove_file(&file);
     }
 

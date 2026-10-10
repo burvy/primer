@@ -8,10 +8,12 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{AnswerRequest, PageDto, ProblemDto};
+use primer_api::{AnswerRequest, AudioSettings, PageDto, ProblemDto};
 use primer_core::{Input, Key, Look, press};
 
 use crate::api;
+use crate::audio;
+use crate::components::audio_controls::AudioControls;
 use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
 use crate::components::lesson::LessonPage;
@@ -50,6 +52,25 @@ fn BookPage(children: Children) -> impl IntoView {
 pub fn App() -> impl IntoView {
     let look = RwSignal::new(Look::Gentle);
     let screen = RwSignal::new(Screen::Loading);
+    // What the child wants to hear. The server remembers it per child, so
+    // the first thing the page does is ask.
+    let sound = RwSignal::new(AudioSettings::default());
+    spawn_local(async move {
+        if let Ok(saved) = api::audio().await {
+            sound.set(saved);
+        }
+    });
+    // Whenever the switches change, tell the audio. An `Effect` is code that
+    // re-runs when a signal it reads changes.
+    Effect::new(move |_| {
+        let s = sound.get();
+        audio::configure(s.narration, s.sounds, s.music);
+    });
+    let on_sound = move |now: AudioSettings| {
+        spawn_local(async move {
+            let _ = api::set_audio(&now).await;
+        });
+    };
 
     // Start in Gentle, and tell the server so both sides agree. (Remembering
     // the look per child arrives with child profiles, slice 10.)
@@ -64,6 +85,7 @@ pub fn App() -> impl IntoView {
         <div class="shell" data-look=move || word(look.get())>
             <BookPage>
                 <LookSwitch look=look on_switch=on_switch />
+                <AudioControls settings=sound on_change=on_sound />
                 {move || match screen.get() {
                     Screen::Loading => view! { <p class="note">"Opening the book…"</p> }.into_any(),
                     Screen::Failed(message) => {
@@ -184,6 +206,10 @@ fn Practice(
 /// The verdict, then on to the next page.
 #[component]
 fn Feedback(correct: bool, next: PageDto, screen: RwSignal<Screen>) -> impl IntoView {
+    // A right answer chimes.
+    if correct {
+        audio::sound("chime");
+    }
     // STUB wording: the human writes the real lines.
     let message = if correct {
         "Yes, that's right."

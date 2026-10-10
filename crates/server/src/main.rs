@@ -3,13 +3,18 @@
 //! Settings come from environment variables, with local defaults:
 //! `PRIMER_ADDR` (127.0.0.1:3000), `DATABASE_URL` (sqlite://primer.db) and
 //! `PRIMER_DIST` (crates/web/dist, the folder `trunk build` writes) and
-//! `PRIMER_CONTENT` (content, the folder of chapter files).
+//! `PRIMER_CONTENT` (content, the folder of chapter files) and `PRIMER_ASSETS`
+//! (assets, the folder of drawings, recordings and sounds).
+//!
+//! `primer-server voices` does not start the server: it makes placeholder
+//! recordings and writes `assets/voice/RECORDINGS.md` (see `voices.rs`).
 
 mod content;
 mod db;
 mod judge;
 mod names;
 mod routes;
+mod voices;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -24,15 +29,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://primer.db".into());
     let dist = std::env::var("PRIMER_DIST").unwrap_or_else(|_| "crates/web/dist".into());
     let content_dir = std::env::var("PRIMER_CONTENT").unwrap_or_else(|_| "content".into());
+    let assets = std::env::var("PRIMER_ASSETS").unwrap_or_else(|_| "assets".into());
 
     // The book is checked before anything starts. Broken content is a
     // refusal to start, listing every problem, not a surprise for a child.
     let content = content::Content::load(std::path::Path::new(&content_dir)).map_err(|errors| {
         let lines: Vec<String> = errors.iter().map(|e| format!("  {e}")).collect();
-        format!("the content is broken:
-{}", lines.join("
-"))
+        format!("the content is broken:\n{}", lines.join("\n"))
     })?;
+    // `voices` is a chore, not the server: do it and stop.
+    if std::env::args().nth(1).as_deref() == Some("voices") {
+        let script = std::path::Path::new("tools/voice/placeholders.ps1");
+        return voices::run(&content, std::path::Path::new(&assets), script).map_err(Into::into);
+    }
     for gap in &content.gaps {
         println!("not written yet: {gap}");
     }
@@ -48,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         judge: Arc::new(judge::FakeJudge),
         content: Arc::new(content),
     };
-    let app = routes::router(state, PathBuf::from(dist));
+    let app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     println!("primer listening on http://{addr}");
