@@ -1,0 +1,7 @@
+<!-- PLACEHOLDER ornament divider. A simple rule with a diamond; the human
+     replaces it with a drawn ornament. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="40" viewBox="0 0 300 40">
+  <line x1="10" y1="20" x2="130" y2="20" stroke="#8a6f4d" stroke-width="2"/>
+  <line x1="170" y1="20" x2="290" y2="20" stroke="#8a6f4d" stroke-width="2"/>
+  <rect x="142" y="12" width="16" height="16" transform="rotate(45 150 20)" fill="none" stroke="#8a6f4d" stroke-width="2"/>
+</svg>

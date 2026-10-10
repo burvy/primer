@@ -4,7 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-rand = { version = "0.10.3", default-features = false }
+# `std_rng` is a seedable generator in pure Rust (no OS randomness), so the
+# policy can rebuild the same set from the same seed on server and browser.
+rand = { version = "0.10.3", default-features = false, features = ["std_rng"] }
 
 [dev-dependencies]
 rand = { version = "0.10.3", features = ["std_rng"] }

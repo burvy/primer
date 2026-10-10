@@ -1,0 +1,105 @@
+//! A lesson: a list of beats, shown one tap at a time.
+
+use leptos::prelude::*;
+use primer_api::BeatDto;
+use primer_core::Look;
+
+use super::equation::{LabelEquation, RichText};
+use super::pictures::{Counters, Machine, Machines, NumberLine, Pouches, Tower};
+
+/// The picture for one beat. `match` on the `show` word picks the drawing;
+/// the beat's small settings (`count`, `at`, ...) are handed to it.
+#[component]
+fn Picture(beat: BeatDto) -> impl IntoView {
+    match beat.show.as_str() {
+        "counters" => {
+            view! { <Counters count=beat.count.unwrap_or(0) adding=beat.adding.unwrap_or(0) /> }
+                .into_any()
+        }
+        "number-line" => {
+            let (at, hop) = (beat.at.unwrap_or(0), beat.hop.unwrap_or(0));
+            view! { <NumberLine max=(at + hop).max(5) from=Some(at) hop=hop forward=true /> }
+                .into_any()
+        }
+        "machine" => view! {
+            <Machine
+                input=beat.input
+                output=beat.output
+                highlight=beat.highlight.clone()
+                open=beat.open.unwrap_or(false)
+            />
+        }
+        .into_any(),
+        "machines" => view! {
+            <Machines
+                input=beat.input
+                output=beat.output
+                highlight=beat.highlight.clone()
+                open=beat.open.unwrap_or(false)
+            />
+        }
+        .into_any(),
+        "tower" => {
+            view! { <Tower count=beat.count.unwrap_or(0) adding=beat.adding.unwrap_or(0) /> }
+                .into_any()
+        }
+        "pouches" => view! {
+            <Pouches
+                left=beat.left.unwrap_or(0)
+                right=beat.right.unwrap_or(0)
+                join=beat.join.unwrap_or(false)
+                swap=beat.swap.unwrap_or(false)
+                total=beat.total
+            />
+        }
+        .into_any(),
+        "equation" => view! {
+            <LabelEquation
+                label=beat.label.clone().unwrap_or_default()
+                highlight=beat.highlight.clone()
+            />
+        }
+        .into_any(),
+        other => view! { <p class="note">{format!("[picture \"{other}\" not drawn yet]")}</p> }
+            .into_any(),
+    }
+}
+
+/// Shows beat number `step` of `beats`. Tapping the button moves on; after the
+/// last beat it calls `on_done`. The Exceptional look shows each beat's
+/// `formal` wording instead of `text` when it has one.
+#[component]
+pub fn LessonPage(
+    beats: Vec<BeatDto>,
+    look: RwSignal<Look>,
+    #[prop(into)] on_done: Callback<()>,
+) -> impl IntoView {
+    let step = RwSignal::new(0usize);
+    let last = beats.len().saturating_sub(1);
+    let beats = StoredValue::new(beats);
+    view! {
+        <div class="lesson">
+            <div class="ada" role="img" aria-label="Ada, the narrator"></div>
+            {move || {
+                let beat = beats.with_value(|all| all.get(step.get()).cloned()).unwrap_or_default();
+                let text = match (look.get(), &beat.formal) {
+                    (Look::Exceptional, Some(formal)) => formal.clone(),
+                    _ => beat.text.clone(),
+                };
+                view! {
+                    <Picture beat=beat />
+                    <p><RichText text=text /></p>
+                }
+            }}
+            <button type="button" class="next" on:click=move |_| {
+                if step.get() >= last {
+                    on_done.run(());
+                } else {
+                    step.update(|s| *s += 1);
+                }
+            }>
+                {move || if step.get() >= last { "Done" } else { "Next ▸" }}
+            </button>
+        </div>
+    }
+}

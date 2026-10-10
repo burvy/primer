@@ -1,0 +1,11 @@
+<!-- PLACEHOLDER "Proved Exceptional" seal in Byrne colours. The human draws
+     the real seal; code only shows this file (see texture seal). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#1a1a1a" stroke-width="4"/>
+  <circle cx="100" cy="100" r="76" fill="none" stroke="#d2232a" stroke-width="3"/>
+  <rect x="70" y="55" width="60" height="20" fill="#d2232a"/>
+  <rect x="70" y="80" width="60" height="20" fill="#f4b400"/>
+  <rect x="70" y="105" width="60" height="20" fill="#1f5fa8"/>
+  <text x="100" y="155" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#1a1a1a">PROVED</text>
+  <text x="100" y="173" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#1a1a1a">EXCEPTIONAL</text>
+</svg>

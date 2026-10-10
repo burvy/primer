@@ -1,3 +1,4 @@
 /target
 jev-key.env
 /crates/web/dist
+/primer.db*

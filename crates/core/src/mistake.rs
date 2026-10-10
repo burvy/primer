@@ -16,6 +16,10 @@ pub enum MistakeKind {
     /// Right digits, wrong order: wrote 21 for 12.
     DigitsSwapped,
     /// Off by exactly ten on a sum that crosses a ten: forgot to carry or borrow.
+    /// Also the classic "smaller from larger" bug: `13 - 5` written as 12,
+    /// because 3 - 5 is stuck, so the child does 5 - 3 instead. It is the same
+    /// root cause (not knowing how to borrow), so it shares this kind and the
+    /// borrowing hint, and the set of hints to write does not grow.
     CarryOrBorrow,
     /// Never returned by `detect`; set elsewhere, for example from a very fast answer.
     Guess,
@@ -38,6 +42,7 @@ pub fn detect(problem: &Problem, given: u32) -> Option<MistakeKind> {
         .then_some(MistakeKind::OffByOne)
         .or_else(|| digits_swapped(answer, given).then_some(MistakeKind::DigitsSwapped))
         .or_else(|| forgot_to_regroup(problem, given).then_some(MistakeKind::CarryOrBorrow))
+        .or_else(|| smaller_from_larger(problem, given).then_some(MistakeKind::CarryOrBorrow))
         .or_else(|| {
             (wrong_operation_answer(problem) == Some(given)).then_some(MistakeKind::WrongOperation)
         })
@@ -57,6 +62,16 @@ fn forgot_to_regroup(problem: &Problem, given: u32) -> bool {
         Op::Sub => a < b,
     };
     crosses_ten && given.abs_diff(problem.answer()) == 10
+}
+
+/// `13 - 5` written as 12: the ones digits are 3 and 5, so the child takes the
+/// smaller from the larger (5 - 3 = 2) and keeps the tens (10), giving 12.
+fn smaller_from_larger(problem: &Problem, given: u32) -> bool {
+    let (a, b) = (problem.a(), problem.b());
+    problem.op() == Op::Sub
+        && problem.blank() == Blank::Answer
+        && a % 10 < b % 10
+        && given == a / 10 * 10 + (b % 10 - a % 10)
 }
 
 /// What the child would type had they used the wrong operation, if that is

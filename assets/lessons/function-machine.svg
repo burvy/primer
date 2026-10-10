@@ -1,0 +1,46 @@
+<!-- PLACEHOLDER function machine for chapter 1 (the +1 machine).
+     The human redraws every shape in Inkscape; code NEVER draws these parts.
+     Keep the named layers: code shows/animates them by id (for example it
+     hides #hatch-closed and shows #hatch-open when the block drops through).
+     Canvas: 400 x 300. Simple grey boxes and arrows, obviously temporary. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#faf3e3"/>
+  <g inkscape:groupmode="layer" inkscape:label="body" id="body">
+    <rect x="110" y="80" width="180" height="160" rx="12" fill="#d8c9a8" stroke="#4a3b2a" stroke-width="3"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="funnel" id="funnel">
+    <path d="M140 40 L260 40 L210 80 L190 80 Z" fill="#b9a67f" stroke="#4a3b2a" stroke-width="3"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="chute" id="chute">
+    <rect x="180" y="240" width="40" height="40" fill="#b9a67f" stroke="#4a3b2a" stroke-width="3"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="front-panel" id="front-panel">
+    <rect x="130" y="110" width="140" height="60" fill="#fffdf6" stroke="#4a3b2a" stroke-width="2"/>
+    <text x="200" y="148" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#4a3b2a">+ 1</text>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="input-glow" id="input-glow">
+    <ellipse cx="200" cy="40" rx="46" ry="10" fill="#f4b400" opacity="0.45"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="output-glow" id="output-glow">
+    <ellipse cx="200" cy="282" rx="46" ry="10" fill="#3e7d46" opacity="0.45"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="hatch-closed" id="hatch-closed">
+    <rect x="150" y="180" width="100" height="12" fill="#4a3b2a"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="hatch-open" id="hatch-open" opacity="0.25">
+    <rect x="150" y="180" width="38" height="12" fill="#4a3b2a"/>
+    <rect x="212" y="180" width="38" height="12" fill="#4a3b2a"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="block" id="block">
+    <rect x="185" y="52" width="30" height="30" fill="#b3541e" stroke="#4a3b2a" stroke-width="2"/>
+    <text x="200" y="74" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fff8ec">3</text>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="gear" id="gear">
+    <circle cx="290" cy="200" r="22" fill="none" stroke="#4a3b2a" stroke-width="4"/>
+    <circle cx="290" cy="200" r="7" fill="#4a3b2a"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="pipe" id="pipe">
+    <path d="M312 200 H360 V120" fill="none" stroke="#4a3b2a" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

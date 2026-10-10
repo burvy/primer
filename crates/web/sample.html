@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- Static theme sample: no Rust, no build step. Open this file directly in
+     a browser (double-click it, or serve the folder). The button flips
+     `data-look` on the page body, proving both themes restyle it. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Primer looks sample</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-look="gentle">
+  <main class="book page-turn" id="page">
+    <button type="button" id="flip">Show Exceptional look</button>
+
+    <h2 class="proposition">Count on</h2>
+    <div class="ada" role="img" aria-label="Ada, the narrator"></div>
+    <p>Ada says: three stars shine over the gate. One more joins them.</p>
+    <p class="equation">3 + 1 = <span class="box">4</span></p>
+    <div class="ornament" role="separator"></div>
+
+    <h2>Your turn</h2>
+    <p class="equation">2 + 1 = <span class="box">?</span></p>
+    <div class="keypad" aria-label="Keypad mock">
+      <button type="button">1</button>
+      <button type="button">2</button>
+      <button type="button">3</button>
+      <button type="button">4</button>
+      <button type="button">5</button>
+      <button type="button">6</button>
+      <button type="button">7</button>
+      <button type="button">8</button>
+      <button type="button">9</button>
+    </div>
+  </main>
+
+  <script>
+    // Flip data-look between gentle and exceptional with a page-turn beat.
+    const page = document.getElementById("page");
+    const flip = document.getElementById("flip");
+    flip.addEventListener("click", () => {
+      page.classList.add("leaving");
+      setTimeout(() => {
+        const next = document.body.dataset.look === "gentle" ? "exceptional" : "gentle";
+        document.body.dataset.look = next;
+        flip.textContent = next === "gentle" ? "Show Exceptional look" : "Show Gentle look";
+        page.classList.remove("leaving");
+      }, 350);
+    });
+  </script>
+</body>
+</html>
