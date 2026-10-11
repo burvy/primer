@@ -245,3 +245,308 @@ fn stage_index(at: &Attempt) -> Option<usize> {
         .iter()
         .position(|&s| s == at.stage)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::problem::Op;
+
+    const CH1: &str = "count-on-within-5";
+    const SET: &str = "ch1-a";
+
+    /// One answered problem: `a + 1` in `set_id`, shown at `stage`.
+    fn attempt(a: u32, set_id: &str, stage: Stage, outcome: Outcome) -> Event {
+        Event::Attempt(Attempt {
+            skill: CH1,
+            set_id: set_id.into(),
+            problem: Problem::new(a, Op::Add, 1).unwrap(),
+            stage,
+            look: Look::Gentle,
+            answer: Some(a + 1),
+            outcome,
+            ms_taken: 4_000,
+            strategy: Strategy::CountOn,
+            frustrated: false,
+            reflection: Reflection::default(),
+        })
+    }
+
+    /// `n` right answers at `stage`, one after the other.
+    fn rights(stage: Stage, n: u32) -> Vec<Event> {
+        (0..n)
+            .map(|i| attempt(2 + i, SET, stage, Outcome::Correct))
+            .collect()
+    }
+
+    /// The attempt above, taking `SLOW_MS + 1` milliseconds.
+    fn slow_attempt() -> Event {
+        let mut event = attempt(2, SET, Stage::Pictorial, Outcome::Correct);
+        let Event::Attempt(at) = &mut event else {
+            unreachable!()
+        };
+        at.ms_taken = SLOW_MS + 1;
+        event
+    }
+
+    #[test]
+    fn an_empty_history_gives_the_default_learner() {
+        let learner = Learner::from_events(&[]);
+        assert_eq!(learner, Learner::default());
+        // A skill never practised has default progress, and is not mastered.
+        assert_eq!(learner.progress(CH1), Progress::default());
+        assert_eq!(learner.progress("make-ten"), Progress::default());
+        assert!(!learner.mastered(CH1));
+        assert_eq!(learner.current_set, None);
+        assert_eq!(learner.strategy, None);
+        assert!(learner.recent.is_empty());
+        assert!(!learner.struggling && !learner.last_slow);
+    }
+    #[test]
+    fn one_right_answer_starts_a_streak_and_the_set() {
+        let learner = Learner::from_events(&rights(Stage::Pictorial, 1));
+        let progress = learner.progress(CH1);
+        assert_eq!((progress.stage, progress.streak), (0, 1));
+        assert_eq!(progress.wrong_in_row, 0);
+        assert!(!progress.mastered);
+        assert_eq!(learner.answered.get(SET), Some(&1));
+        assert_eq!(learner.right.get(SET), Some(&1));
+        assert_eq!(learner.current_set.as_deref(), Some(SET));
+        assert_eq!(learner.sets_started[CH1], vec![SET.to_string()]);
+        assert_eq!(learner.recent.len(), 1);
+        assert!(learner.recent_at_set_start.is_empty());
+        assert_eq!(learner.strategy, Some(Strategy::CountOn));
+        assert!(!learner.struggling && !learner.last_slow);
+    }
+
+    #[test]
+    fn a_wrong_answer_clears_the_streak_but_keeps_the_stage() {
+        let learner = Learner::from_events(&[
+            attempt(2, SET, Stage::Pictorial, Outcome::Correct),
+            attempt(
+                3,
+                SET,
+                Stage::Pictorial,
+                Outcome::Wrong(MistakeKind::OffByOne),
+            ),
+        ]);
+        let progress = learner.progress(CH1);
+        assert_eq!(
+            (progress.stage, progress.streak, progress.wrong_in_row),
+            (0, 0, 1)
+        );
+        // One wrong in a row is not yet a step back, so there is no hint.
+        assert_eq!(progress.hint, None);
+        assert_eq!(progress.step_backs, 0);
+        assert_eq!(learner.answered.get(SET), Some(&2));
+        assert_eq!(learner.right.get(SET), Some(&1));
+    }
+
+    #[test]
+    fn a_right_answer_after_a_wrong_one_is_progress_again() {
+        let learner = Learner::from_events(&[
+            attempt(
+                2,
+                SET,
+                Stage::Pictorial,
+                Outcome::Wrong(MistakeKind::OffByOne),
+            ),
+            attempt(3, SET, Stage::Pictorial, Outcome::Correct),
+        ]);
+        let progress = learner.progress(CH1);
+        assert_eq!(
+            (progress.stage, progress.streak, progress.wrong_in_row),
+            (0, 1, 0)
+        );
+        assert_eq!(progress.hint, None);
+        assert_eq!(progress.step_backs, 0);
+    }
+
+    #[test]
+    fn two_wrong_answers_step_back_with_the_mistake_as_a_hint() {
+        let mut events = rights(Stage::Pictorial, 3);
+        assert_eq!(Learner::from_events(&events).progress(CH1).stage, 1);
+        events.push(attempt(
+            2,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::OffByOne),
+        ));
+        assert_eq!(Learner::from_events(&events).progress(CH1).stage, 1);
+        events.push(attempt(
+            3,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::DigitsSwapped),
+        ));
+        let progress = Learner::from_events(&events).progress(CH1);
+        assert_eq!(progress.stage, 0);
+        assert_eq!(progress.step_backs, 1);
+        // The hint remembers the mistake that caused the step back.
+        assert_eq!(progress.hint, Some(MistakeKind::DigitsSwapped));
+        assert_eq!(progress.wrong_in_row, 0);
+    }
+
+    #[test]
+    fn a_right_answer_clears_the_hint_left_by_a_step_back() {
+        let mut events = rights(Stage::Pictorial, 3);
+        events.push(attempt(
+            2,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::Guess),
+        ));
+        events.push(attempt(
+            3,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::Guess),
+        ));
+        events.push(attempt(4, SET, Stage::Pictorial, Outcome::Correct));
+        let progress = Learner::from_events(&events).progress(CH1);
+        assert_eq!(progress.hint, None);
+        // The step back itself stays counted until the lesson is seen again.
+        assert_eq!(progress.step_backs, 1);
+        assert_eq!((progress.stage, progress.streak), (0, 1));
+    }
+
+    #[test]
+    fn three_right_answers_move_up_a_stage() {
+        let learner = Learner::from_events(&rights(Stage::Pictorial, 3));
+        let progress = learner.progress(CH1);
+        assert_eq!((progress.stage, progress.streak), (1, 0));
+        assert!(!progress.mastered);
+    }
+
+    #[test]
+    fn nine_right_answers_master_the_skill() {
+        let mut events = rights(Stage::Pictorial, 3);
+        events.extend(rights(Stage::NumberLine, 3));
+        events.extend(rights(Stage::Abstract, 3));
+        let learner = Learner::from_events(&events);
+        assert!(learner.mastered(CH1));
+        assert_eq!(learner.progress(CH1).stage, 2);
+    }
+
+    #[test]
+    fn a_right_answer_on_an_easier_stage_is_not_progress() {
+        let mut events = rights(Stage::Pictorial, 3);
+        events.push(attempt(5, SET, Stage::Pictorial, Outcome::Correct));
+        let progress = Learner::from_events(&events).progress(CH1);
+        // Kind words: the stage and the streak both stay as they were.
+        assert_eq!((progress.stage, progress.streak), (1, 0));
+    }
+
+    #[test]
+    fn seeing_the_lesson_again_clears_the_step_backs() {
+        let mut events = rights(Stage::Pictorial, 3);
+        events.push(attempt(
+            2,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::Guess),
+        ));
+        events.push(attempt(
+            3,
+            SET,
+            Stage::NumberLine,
+            Outcome::Wrong(MistakeKind::Guess),
+        ));
+        assert_eq!(Learner::from_events(&events).progress(CH1).step_backs, 1);
+        events.push(Event::LessonSeen {
+            skill: CH1,
+            lesson: "intro".into(),
+        });
+        let learner = Learner::from_events(&events);
+        assert_eq!(learner.progress(CH1).step_backs, 0);
+        assert!(learner.lessons_seen.contains(&(CH1, "intro".to_string())));
+        // Only the step backs reset: the child stays on the easier stage.
+        assert_eq!(learner.progress(CH1).stage, 0);
+    }
+
+    #[test]
+    fn the_recent_list_keeps_only_the_last_twenty() {
+        let events: Vec<Event> = (0..RECENT as u32 + 5)
+            .map(|a| attempt(a, SET, Stage::Pictorial, Outcome::Correct))
+            .collect();
+        let learner = Learner::from_events(&events);
+        assert_eq!(learner.recent.len(), RECENT);
+        // Newest at the back: the first five problems have fallen off.
+        assert_eq!(learner.recent.front().unwrap().to_string(), "5 + 1");
+        assert_eq!(learner.recent.back().unwrap().to_string(), "24 + 1");
+    }
+
+    #[test]
+    fn a_story_answer_is_not_a_set_the_child_started() {
+        let learner = Learner::from_events(&[
+            attempt(2, SET, Stage::Pictorial, Outcome::Correct),
+            attempt(3, "story:tower", Stage::Pictorial, Outcome::Correct),
+        ]);
+        // The story must not steal the place of the set being worked on.
+        assert_eq!(learner.current_set.as_deref(), Some(SET));
+        assert!(
+            !learner.sets_started[CH1]
+                .iter()
+                .any(|id| story_id(id).is_some())
+        );
+        assert_eq!(learner.answered.get("story:tower"), Some(&1));
+        assert_eq!(learner.right.get("story:tower"), Some(&1));
+        // With no set started yet, a story alone leaves none current.
+        let alone = Learner::from_events(&[attempt(
+            2,
+            "story:tower",
+            Stage::Pictorial,
+            Outcome::Correct,
+        )]);
+        assert_eq!(alone.current_set, None);
+        assert!(alone.sets_started.get(CH1).is_none());
+    }
+
+    #[test]
+    fn slow_unknown_or_frustrated_answers_count_as_a_struggle() {
+        let slow = Learner::from_events(&[slow_attempt()]);
+        assert!(slow.struggling && slow.last_slow);
+
+        // "I don't know" costs the streak, but was answered quickly.
+        let mut events = rights(Stage::Pictorial, 2);
+        events.push(attempt(3, SET, Stage::Pictorial, Outcome::DontKnow));
+        let dont_know = Learner::from_events(&events);
+        assert!(dont_know.struggling && !dont_know.last_slow);
+        assert_eq!(dont_know.progress(CH1).streak, 0);
+
+        let mut tired = attempt(4, SET, Stage::Pictorial, Outcome::Correct);
+        let Event::Attempt(at) = &mut tired else {
+            unreachable!()
+        };
+        at.frustrated = true;
+        let tired = Learner::from_events(&[tired]);
+        assert!(tired.struggling && !tired.last_slow);
+    }
+
+    #[test]
+    fn ask_rules_follow_the_first_right_answer_and_a_slow_one_before() {
+        let fresh = Learner::from_events(&[]);
+        assert_eq!(
+            fresh.ask_rules(SET),
+            AskRules {
+                first_right_in_set: true,
+                slow_before: false
+            }
+        );
+        let answered = Learner::from_events(&rights(Stage::Pictorial, 1));
+        assert_eq!(
+            answered.ask_rules(SET),
+            AskRules {
+                first_right_in_set: false,
+                slow_before: false
+            }
+        );
+        let slow = Learner::from_events(&[slow_attempt()]);
+        assert_eq!(
+            slow.ask_rules(SET),
+            AskRules {
+                first_right_in_set: false,
+                slow_before: true
+            }
+        );
+    }
+}
