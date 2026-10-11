@@ -686,3 +686,48 @@ body.speaking .ada #mouth-closed {
 .item-new .link {
   font-weight: bold;
 }
+
+/* ---- Ada asks how the child worked it out, or how they feel ---- */
+
+/* Big tap targets: at least 6rem square, two or more to a row. */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--gap);
+  margin-top: var(--gap);
+}
+.choice {
+  min-height: 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  font-family: var(--body-font);
+  font-size: 1.125rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink-soft);
+  border-radius: var(--corner);
+  cursor: pointer;
+}
+.choice .picture {
+  font-size: 2.75rem;
+  line-height: 1;
+}
+.choice.picked {
+  border-color: var(--ink);
+  border-width: 4px;
+  background: var(--paper-shade);
+}
+.choice-actions {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: var(--gap);
+}
+.choice-actions .go,
+.choice-actions .dont-know {
+  margin: var(--gap) 0 0;
+}

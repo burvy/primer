@@ -323,6 +323,7 @@ mod tests {
                 ms_taken: 4_000,
                 strategy: Strategy::CountOn,
                 frustrated: false,
+                reflection: Default::default(),
             }),
             Page::Story => panic!("no event on the story page"),
         }

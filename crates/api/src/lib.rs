@@ -158,6 +158,9 @@ pub enum PageDto {
         /// word problem for this sum at this stage. (Boxed so a problem page
         /// is not much bigger than the other pages.)
         story: Option<Box<NoteDto>>,
+        /// What Ada may ask after the answer, and when. `None` when the
+        /// book has no `explain.toml` yet. (Boxed, like `story`.)
+        ask: Option<Box<AskDto>>,
     },
     Story,
     /// The written chapters have run out: the end of the book so far.
@@ -206,12 +209,54 @@ pub struct PracticeRequest {
     pub skill: Option<String>,
 }
 
+/// The questions Ada may ask after an answer on this page, with the rule's
+/// inputs. The page decides with `primer_core::explain::asks` once it knows
+/// whether the answer was right, so the answer and the taps go in one call.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AskDto {
+    /// No right answer yet in this set.
+    pub first_right_in_set: bool,
+    /// The answer before was slow.
+    pub slow_before: bool,
+    /// Slower than this (milliseconds) is slow.
+    pub slow_ms: u32,
+    /// "How did you work it out?"
+    pub explain: QuestionDto,
+    /// "How are you feeling?"
+    pub feel: QuestionDto,
+}
+
+/// One question and the pictures to tap.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuestionDto {
+    pub question: NoteDto,
+    pub choices: Vec<ChoiceDto>,
+}
+
+/// One choice: its id (the only thing stored), a picture, and its words.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChoiceDto {
+    pub id: String,
+    /// A picture character, such as an emoji.
+    pub picture: String,
+    pub note: NoteDto,
+}
+
 /// `POST /api/child/{id}/answer`. An `answer` of `null` means "I don't know".
+///
+/// `explanation` and `feeling` are the ids of the choices the child tapped,
+/// if Ada asked and they did not skip. Only ids are sent and stored; there
+/// is no free text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerRequest {
     pub page_id: String,
     pub answer: Option<u32>,
     pub ms_taken: u32,
+    #[serde(default)]
+    pub explanation: Option<String>,
+    /// `"happy"`, `"ok"`, `"stuck"` or `"tired"`.
+    #[serde(default)]
+    pub feeling: Option<String>,
 }
 
 /// The reply to an answer: was it right, what kind of slip if not, and the
@@ -227,6 +272,9 @@ pub struct AnswerResponse {
     pub hint: Option<NoteDto>,
     pub praise: Option<NoteDto>,
     pub set_end: Option<SetEndDto>,
+    /// "Let's rest the pencil": shown first when the child is frustrated
+    /// (felt stuck or tired). The next page is then a stage easier.
+    pub rest: Option<NoteDto>,
     pub next: PageDto,
 }
 

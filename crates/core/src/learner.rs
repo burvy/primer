@@ -14,6 +14,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+use crate::explain::{AskRules, Reflection};
 use crate::look::Look;
 use crate::mistake::MistakeKind;
 use crate::policy::story_id;
@@ -66,8 +67,11 @@ pub struct Attempt {
     pub outcome: Outcome,
     pub ms_taken: u32,
     pub strategy: Strategy,
-    /// The frustration signal read from what the child typed.
+    /// Frustration: a "stuck" or "tired" feeling, or the judge's reading of
+    /// the child's explanation.
     pub frustrated: bool,
+    /// What the child tapped after answering (choice ids only).
+    pub reflection: Reflection,
 }
 
 /// Something that happened. The whole history is a list of these.
@@ -103,6 +107,8 @@ pub struct Learner {
     pub sets_started: BTreeMap<&'static str, Vec<String>>,
     /// How many problems of each set have been answered.
     pub answered: BTreeMap<String, usize>,
+    /// How many of them were right.
+    pub right: BTreeMap<String, usize>,
     /// The last `RECENT` problems answered, newest at the back.
     pub recent: VecDeque<Problem>,
     /// `recent` as it was when the current set started. A generated set is
@@ -112,6 +118,8 @@ pub struct Learner {
     pub current_set: Option<String>,
     /// The last answer was slow, "I don't know", or frustrated.
     pub struggling: bool,
+    /// The last answer was slower than `SLOW_MS`.
+    pub last_slow: bool,
     pub strategy: Option<Strategy>,
 }
 
@@ -128,6 +136,15 @@ impl Learner {
 
     pub fn mastered(&self, skill: &str) -> bool {
         self.progress(skill).mastered
+    }
+
+    /// What decides whether Ada asks after the next answer on a page of
+    /// `set_id` (see [`crate::explain::asks`]).
+    pub fn ask_rules(&self, set_id: &str) -> AskRules {
+        AskRules {
+            first_right_in_set: self.right.get(set_id).copied().unwrap_or(0) == 0,
+            slow_before: self.last_slow,
+        }
     }
 
     /// One step of the fold: the learner after `event`.
@@ -162,6 +179,10 @@ impl Learner {
             self.current_set = Some(at.set_id.clone());
         }
         *self.answered.entry(at.set_id.clone()).or_default() += 1;
+        if at.outcome == Outcome::Correct {
+            *self.right.entry(at.set_id.clone()).or_default() += 1;
+        }
+        self.last_slow = at.ms_taken > SLOW_MS;
         self.recent.push_back(at.problem);
         if self.recent.len() > RECENT {
             self.recent.pop_front();

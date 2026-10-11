@@ -25,7 +25,8 @@ use primer_api::{
 };
 use primer_core::policy;
 use primer_core::{
-    Attempt, Event, Learner, MistakeKind, Op, Outcome, Page, Problem, Strategy, detect,
+    Attempt, Event, Learner, MistakeKind, Op, Outcome, Page, Problem, Reflection, SLOW_MS,
+    Strategy, detect,
 };
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -34,7 +35,7 @@ use tower_http::services::ServeDir;
 
 use crate::auth::{self, Parent};
 use crate::children;
-use crate::content::Content;
+use crate::content::{Content, explain};
 use crate::content::feedback::Facts;
 use crate::db::{self, ParentId};
 use crate::judge::SharedJudge;
@@ -91,6 +92,8 @@ enum ApiError {
     NotFound,
     /// The request does not fit the child's current page: 409.
     Conflict(&'static str),
+    /// The request names something the book does not have: 400.
+    BadRequest(&'static str),
     /// The database failed: 500. The details are logged, not sent to the child.
     Database(sqlx::Error),
 }
@@ -108,6 +111,7 @@ impl IntoResponse for ApiError {
         match self {
             ApiError::NotFound => (StatusCode::NOT_FOUND, "no such child").into_response(),
             ApiError::Conflict(why) => (StatusCode::CONFLICT, why).into_response(),
+            ApiError::BadRequest(why) => (StatusCode::BAD_REQUEST, why).into_response(),
             ApiError::Database(error) => {
                 eprintln!("database error: {error}");
                 (StatusCode::INTERNAL_SERVER_ERROR, "something went wrong").into_response()
@@ -212,6 +216,20 @@ async fn answer(
         return Err(ApiError::Conflict("that page is out of date"));
     }
 
+    // What the child tapped after answering. Only ids the book has are
+    // accepted, so nothing but a known id can ever be stored.
+    let explained = match body.explanation.as_deref() {
+        None => None,
+        Some(id) => {
+            let found = state.content.explain.as_ref().and_then(|e| e.explanation(id));
+            Some((id, found.ok_or(ApiError::BadRequest("no such explanation"))?))
+        }
+    };
+    let feeling = match body.feeling.as_deref() {
+        None => None,
+        Some(id) => Some(explain::feeling(id).ok_or(ApiError::BadRequest("no such feeling"))?),
+    };
+
     // Pure check first. Only a wrong answer with no recognisable signature
     // is handed to the judge.
     let outcome = match body.answer {
@@ -222,6 +240,12 @@ async fn answer(
             None => state.judge.mistake(problem, given).await,
         }),
     };
+    // A tapped choice says what it means, so taps need no AI: the strategy
+    // is the one the choice stands for, and a "stuck" or "tired" tap is
+    // frustration as it stands. (`judge.judge` will read explanations that
+    // are typed or spoken, later.)
+    let strategy = explained.map_or(Strategy::Unknown, |(_, chosen)| chosen);
+    let frustrated = feeling.is_some_and(|f| f.frustrated());
     let event = Event::Attempt(Attempt {
         skill,
         set_id: set_id.clone(),
@@ -231,8 +255,12 @@ async fn answer(
         answer: body.answer,
         outcome,
         ms_taken: body.ms_taken,
-        strategy: Strategy::Unknown,
-        frustrated: false,
+        strategy,
+        frustrated,
+        reflection: Reflection {
+            explanation: explained.map(|(id, _)| id.to_string()),
+            feeling,
+        },
     });
     db::append(&state.pool, &id, &event).await?;
 
@@ -281,6 +309,10 @@ async fn answer(
         hint,
         praise,
         set_end: set_ended.then(|| content.set_end(set_id)).flatten(),
+        // The learner is now `struggling`, so `next` is a stage easier.
+        rest: frustrated
+            .then(|| content.explain.as_ref().map(|e| e.rest.clone()))
+            .flatten(),
         next: page_dto(&next, &learner, content, now.look, now.focus.is_some()),
     }))
 }
@@ -476,6 +508,10 @@ fn page_dto(
             hint: hint.map(|kind| name(MISTAKES, kind).to_string()),
             easier: *easier,
             story: content.story(skill, set_id).map(Box::new),
+            ask: content
+                .explain
+                .as_ref()
+                .map(|e| Box::new(e.ask(learner.ask_rules(set_id), SLOW_MS))),
         },
         Page::Story => PageDto::Story,
     }
@@ -538,6 +574,10 @@ text = "Correct!"
             (
                 "hero_names.toml".to_string(),
                 "names = [\"Liu Hui\", \"Noether\"]".to_string(),
+            ),
+            (
+                "explain.toml".to_string(),
+                crate::content::explain::tests::GOOD.to_string(),
             ),
         ]
     }
@@ -1080,6 +1120,157 @@ text = "Correct!"
             assert_eq!(dev, StatusCode::NOT_FOUND, "{name}");
             let _ = std::fs::remove_file(&file);
         }
+    }
+
+    /// Sends an answer with what the child tapped after it.
+    async fn answer_tapped(
+        app: &Router,
+        page: &PageDto,
+        answer: Option<u32>,
+        explanation: Option<&str>,
+        feeling: Option<&str>,
+    ) -> (StatusCode, Option<AnswerResponse>) {
+        let PageDto::Practice { page_id, .. } = page else {
+            panic!("expected a problem, got {page:?}");
+        };
+        let body = serde_json::json!({
+            "page_id": page_id, "answer": answer, "ms_taken": 9000,
+            "explanation": explanation, "feeling": feeling,
+        });
+        call(app, Method::POST, "/api/child/kid/answer", Some(body)).await
+    }
+
+    /// The `ask` of a practice page.
+    fn ask_of(page: &PageDto) -> primer_api::AskDto {
+        let PageDto::Practice { ask, .. } = page else {
+            panic!("expected a problem, got {page:?}");
+        };
+        *ask.clone().expect("the book has explain.toml")
+    }
+
+    /// The child's last stored answer, read back from the database.
+    async fn last_attempt(file: &std::path::Path) -> Attempt {
+        let events = db::events(&open(file).await, "kid").await.unwrap();
+        events
+            .into_iter()
+            .rev()
+            .find_map(|event| match event {
+                Event::Attempt(attempt) => Some(attempt),
+                _ => None,
+            })
+            .expect("an answer")
+    }
+
+    #[tokio::test]
+    async fn ada_asks_how_after_the_first_right_answer_of_a_set_only() {
+        let file = temp_db("ask-once");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let ask = ask_of(&page);
+        assert!(ask.first_right_in_set);
+        assert_eq!(ask.explain.choices.len(), 3);
+        assert_eq!(ask.feel.choices[2].id, "stuck");
+        // The first page is a story, a set of its own: then the set starts.
+        let story = answer_with(&app, &page, Some(right_answer(&page))).await;
+        let set_page = story.next;
+        assert!(ask_of(&set_page).first_right_in_set);
+        let reply = answer_with(&app, &set_page, Some(right_answer(&set_page))).await;
+        assert!(!ask_of(&reply.next).first_right_in_set);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn a_tapped_way_and_feeling_are_stored_as_ids_and_tired_means_rest() {
+        let file = temp_db("tapped");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let wrong = right_answer(&page) + 3;
+        let (code, reply) =
+            answer_tapped(&app, &page, Some(wrong), Some("counted_on"), Some("tired")).await;
+        assert_eq!(code, StatusCode::OK);
+        let reply = reply.unwrap();
+        // Tired: Ada suggests a rest, and the next page is easier.
+        assert_eq!(reply.rest.unwrap().text, "Let's rest the pencil.");
+        assert!(matches!(reply.next, PageDto::Practice { easier: true, .. }));
+        // Stored: the ids and what they mean, nothing else. The fake judge
+        // knows nothing, so the strategy is the one the choice stands for.
+        let attempt = last_attempt(&file).await;
+        assert_eq!(attempt.strategy, Strategy::CountOn);
+        assert!(attempt.frustrated);
+        assert_eq!(attempt.reflection.explanation.as_deref(), Some("counted_on"));
+        assert_eq!(attempt.reflection.feeling, Some(primer_core::Feeling::Tired));
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn happy_is_not_frustration_and_skipping_stores_nothing() {
+        let file = temp_db("happy");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let (_, reply) = answer_tapped(&app, &page, Some(99), None, Some("happy")).await;
+        let reply = reply.unwrap();
+        assert!(reply.rest.is_none());
+        let attempt = last_attempt(&file).await;
+        assert!(!attempt.frustrated);
+        assert_eq!(attempt.reflection.explanation, None);
+        assert_eq!(attempt.strategy, Strategy::Unknown);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[tokio::test]
+    async fn only_ids_the_book_has_are_accepted() {
+        let file = temp_db("bad-tap");
+        let app = app(&file).await;
+        let page = first_problem(&app).await;
+        let typed = answer_tapped(&app, &page, Some(1), Some("I used my fingers"), None).await;
+        assert_eq!(typed.0, StatusCode::BAD_REQUEST);
+        let feeling = answer_tapped(&app, &page, Some(1), None, Some("grumpy")).await;
+        assert_eq!(feeling.0, StatusCode::BAD_REQUEST);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    /// A judge that reads every answer as "counted all, frustrated, a
+    /// guess", and remembers each explanation it was given.
+    struct ReadingJudge(std::sync::Mutex<Vec<String>>);
+
+    #[async_trait::async_trait]
+    impl crate::judge::Judge for ReadingJudge {
+        async fn judge(
+            &self,
+            _: &Problem,
+            _: Option<u32>,
+            explanation: Option<&str>,
+        ) -> crate::judge::Judgment {
+            self.0.lock().unwrap().extend(explanation.map(str::to_string));
+            crate::judge::Judgment {
+                mistake: MistakeKind::Guess,
+                strategy: Strategy::CountAll,
+                frustrated: true,
+            }
+        }
+        async fn identifying(&self, _: &str) -> bool {
+            false
+        }
+    }
+
+    #[tokio::test]
+    async fn a_tap_is_never_sent_to_the_judge_but_an_unnamed_slip_still_is() {
+        let file = temp_db("judged");
+        let judge = Arc::new(ReadingJudge(Default::default()));
+        let app = app_with(&file, judge.clone()).await;
+        let page = first_problem(&app).await;
+        // 0 + 1 = 9: no slip code can name, so the judge names it.
+        let (_, reply) = answer_tapped(&app, &page, Some(9), Some("just_knew"), None).await;
+        let reply = reply.unwrap();
+        assert_eq!(reply.mistake.as_deref(), Some("guess"));
+        // The tap meant "just knew" and no feeling: the judge's "counted
+        // all, frustrated" plays no part, and it was given no explanation.
+        assert!(reply.rest.is_none());
+        assert!(judge.0.lock().unwrap().is_empty());
+        let attempt = last_attempt(&file).await;
+        assert_eq!(attempt.strategy, Strategy::Recall);
+        assert!(!attempt.frustrated);
+        let _ = std::fs::remove_file(&file);
     }
 
     /// A judge that calls every typed name identifying.

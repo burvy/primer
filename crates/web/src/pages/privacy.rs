@@ -23,7 +23,7 @@ pub fn Privacy(route: RwSignal<Route>) -> impl IntoView {
             <p class="note">"Draft wording, to be checked by the people who run this book."</p>
             <ul>
                 <li>"A grown-up owns everything. Children have no login."</li>
-                <li>"We keep a hero name, an age band (5 to 6, or 7 to 8), a look, and the answers given. No real names are kept, for anyone."</li>
+                <li>"We keep a hero name, an age band (5 to 6, or 7 to 8), a look, and the answers given, with the picture a child tapped to say how they worked it out or how they felt. No real names are kept, for anyone."</li>
                 <li>"The parent's sign-in is Google's. We keep only the permanent number Google gives the account: no email address and no name."</li>
                 <li>"When a child types how they worked something out, it goes to one service (TypeSafe) to be read, and is then dropped. Only a short label of the method is kept."</li>
                 <li>"A grown-up can export a child's data, delete a child, or delete the whole account at any time. Deleting removes everything, answers included."</li>
