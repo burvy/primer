@@ -1,0 +1,167 @@
+# Chapter 8: Add within 20, crossing ten. Stop at ten, then go on.
+# Words: bridge through ten, near doubles (almost twins).
+
+skill = "add-within-20-carry"
+title = "Bridging Ten"
+
+[[lesson]]
+id = "ch8-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "8 + 5"
+
+[[lesson.step.beat]]
+text = "A frame holds 8 counters. 5 more wait outside."
+show = "counters"
+count = 8
+adding = 5
+
+[[lesson.step.beat]]
+text = "Move 2 over. The frame is full: 10."
+show = "counters"
+count = 10
+
+[[lesson.step.beat]]
+text = "3 wait still. 10 and 3 is 13."
+show = "counters"
+count = 13
+
+[[lesson.step]]
+stage = "number-line"
+example = "8 + 5"
+
+[[lesson.step.beat]]
+text = "Stand on 8. First hop to 10."
+show = "number-line"
+at = 8
+
+[[lesson.step.beat]]
+text = "Then hop 3 more: 11, 12, 13. Land on 13."
+show = "number-line"
+at = 10
+hop = 3
+
+[[lesson.step]]
+stage = "abstract"
+example = "8 + 5"
+
+[[lesson.step.beat]]
+text = 'We write $8 + 5 = 13$. Stop at ten first. That is bridging through ten.'
+formal = 'Bridge through ten: $8 + 5 = 8 + 2 + 3 = 10 + 3 = 13$.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'Twins help too: $6 + 6 = 12$. $6 + 7$ is one more. Near doubles.'
+formal = 'Near doubles: $6 + 7$ is one more than the double $6 + 6$.'
+show = "equation"
+
+# Bridge pairs: make ten first, then the real sum.
+[[problem_set]]
+id = "ch8-bridge-pairs"
+stage = "pictorial"
+look = "both"
+pattern = "bridge"
+problems = ["8 + 5", "7 + 6", "6 + 9", "9 + 5"]
+question = "How much do you move to fill the frame to ten?"
+notice = "Did you see? Make ten first, then carry the rest over. That is the bridge: $8 + 2$ is 10, so $8 + 5 = 10 + 3$."
+formal_notice = "Bridge: $8 + 2 = 10$, so $8 + 5 = 10 + 3 = 13$."
+
+# Bridge walk on the line: same shape, bigger numbers.
+[[problem_set]]
+id = "ch8-bridge-line"
+stage = "number-line"
+look = "both"
+pattern = "bridge"
+problems = ["9 + 5", "9 + 6", "6 + 7", "6 + 9"]
+question = "Where do you stop before finishing?"
+notice = "Did you see? Always stop at 10, then hop the rest."
+formal_notice = "Stop at ten, then go on: $9 + 4 = 10 + 3 = 13$."
+
+# Near doubles: one more than twins.
+[[problem_set]]
+id = "ch8-near-doubles"
+stage = "abstract"
+look = "both"
+pattern = "near-doubles"
+problems = ["6 + 6", "6 + 7", "7 + 7", "7 + 8"]
+question = "How is each second sum like the twins before it?"
+notice = "Did you see? One more than twins. Near doubles."
+formal_notice = "Near doubles: $6 + 7$ is one more than $6 + 6 = 12$."
+
+[[word_problem]]
+id = "ch8-pouches"
+stage = "pictorial"
+look = "both"
+text = "A pouch holds {a} coins. Another holds {b}. How many coins in all?"
+formal = "A pouch holds {a} coins, another {b}. Find ${a} + {b}$."
+a = 8
+b = 5
+
+[[word_problem]]
+id = "ch8-steps"
+stage = "number-line"
+look = "both"
+text = "The builder stands on step {a}. He climbs {b} more. Where does he land?"
+formal = "From step {a}, climb {b} more. Find ${a} + {b}$."
+a = 9
+b = 5
+
+[[hint]]
+id = "ch8-hint-off-by-one-counters"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Fill the frame to ten first. Count those moved."
+formal = "Move to ten first. Count only what moved."
+
+[[hint]]
+id = "ch8-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "This page only adds. The answer grows."
+formal = "The sign is $+$: expect a bigger number."
+
+[[hint]]
+id = "ch8-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stop at 10 first. Then count the rest."
+formal = "Bridge: reach 10, then hop the remainder."
+
+[[hint]]
+id = "ch8-hint-carry-or-borrow"
+stage = "abstract"
+mistake = "carry-or-borrow"
+text = "Fill the frame to 10. Carry the leftover ones."
+formal = "Split the addend: fill to 10, add the rest."
+
+[[hint]]
+id = "ch8-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Near twins? Take the double, then add one."
+formal = "Use the double you know, then add one more."
+
+[[hint]]
+id = "ch8-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Slow down. How many fill the frame to ten?"
+formal = "How many make ten? The rest rides over."
+
+[[praise]]
+id = "ch8-praise-1"
+text = "Over the bridge! Ten held you up."
+formal = "Bridged through ten."
+
+[[praise]]
+id = "ch8-praise-2"
+text = "Twins plus one. Near doubles yours!"
+formal = "Near doubles solved."
+when = "set-end"
+
+[[praise]]
+id = "ch8-praise-3"
+text = "Big sums now. The builder cheers."
+when = "streak"

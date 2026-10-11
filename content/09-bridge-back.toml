@@ -1,0 +1,160 @@
+# Chapter 9: Subtract within 20, crossing ten. Stop at ten, then go back.
+# Word: bridge back through ten.
+
+skill = "subtract-within-20-borrow"
+title = "Bridging Back"
+
+[[lesson]]
+id = "ch9-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "13 - 5"
+
+[[lesson.step.beat]]
+text = "One full frame and 3 loose counters. Take 5 away."
+show = "counters"
+count = 13
+
+[[lesson.step.beat]]
+text = "Take the 3 loose ones. The frame still stands."
+show = "counters"
+count = 10
+
+[[lesson.step.beat]]
+text = "Take 2 more from the frame. 8 stay."
+show = "counters"
+count = 8
+
+[[lesson.step]]
+stage = "number-line"
+example = "13 - 5"
+
+[[lesson.step.beat]]
+text = "Stand on 13. First hop back to 10."
+show = "number-line"
+at = 13
+
+[[lesson.step.beat]]
+text = "Then hop 2 more back: 9, 8. Land on 8."
+show = "number-line"
+at = 10
+
+[[lesson.step]]
+stage = "abstract"
+example = "13 - 5"
+
+[[lesson.step.beat]]
+text = 'We write $13 - 5 = 8$. Stop at ten first. That is bridging back.'
+formal = 'Bridge back: $13 - 5 = 13 - 3 - 2 = 10 - 2 = 8$.'
+show = "equation"
+
+# Bridge-back pairs: land on ten first, then the real take-away.
+[[problem_set]]
+id = "ch9-bridge-back-pairs"
+stage = "pictorial"
+look = "both"
+pattern = "bridge-back"
+problems = ["13 - 5", "14 - 6", "15 - 7", "16 - 8"]
+question = "How much do you take to land on ten?"
+notice = "Did you see? Land on ten first, then take the rest. That is the bridge back."
+formal_notice = "Bridge back: $13 - 3 = 10$, so $13 - 5 = 10 - 2 = 8$."
+
+# Bridge-back walk on the line.
+[[problem_set]]
+id = "ch9-bridge-back-line"
+stage = "number-line"
+look = "both"
+pattern = "bridge-back"
+problems = ["12 - 4", "13 - 7", "15 - 8", "16 - 9"]
+question = "Where do you stop before finishing?"
+notice = "Did you see? Always stop at 10, then hop back the rest."
+formal_notice = "Stop at ten, then go back: $12 - 4 = 10 - 2 = 8$."
+
+# Bare bridge-backs at the abstract stage.
+[[problem_set]]
+id = "ch9-bridge-back-bare"
+stage = "abstract"
+look = "both"
+pattern = "bridge-back"
+problems = ["16 - 9", "11 - 4", "17 - 9", "14 - 7"]
+question = "Split the take-away. How much reaches ten?"
+notice = "Did you see? Split it: first to ten, then the rest."
+formal_notice = "Split and bridge: $16 - 9 = 16 - 6 - 3 = 10 - 3 = 7$."
+
+[[word_problem]]
+id = "ch9-counters"
+stage = "pictorial"
+look = "both"
+text = "The frame holds 13 counters. The builder takes {b} away. How many stay?"
+formal = "From 13 counters take {b}. Find $13 - {b}$."
+a = 13
+b = 5
+
+[[word_problem]]
+id = "ch9-tower"
+stage = "number-line"
+look = "both"
+text = "The tower stands 15 steps tall. The wind takes {b} down. How many stand?"
+formal = "A tower of 15 steps loses {b}. Find $15 - {b}$."
+a = 15
+b = 7
+
+[[hint]]
+id = "ch9-hint-off-by-one-counters"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Take the loose ones first. Count them."
+formal = "Remove the loose ones first, then the frame."
+
+[[hint]]
+id = "ch9-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "This page only takes away. The answer shrinks."
+formal = "The sign is $-$: expect a smaller number."
+
+[[hint]]
+id = "ch9-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Hop back to 10 first. Then hop the rest."
+formal = "Bridge back: reach 10, then hop the remainder."
+
+[[hint]]
+id = "ch9-hint-carry-or-borrow"
+stage = "abstract"
+mistake = "carry-or-borrow"
+text = "Break the frame open. Ten becomes loose ones."
+formal = "Borrow from the ten: split the take-away at 10."
+
+[[hint]]
+id = "ch9-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "How many reach ten? Take those first."
+formal = "Take to ten first, then take the rest."
+
+[[hint]]
+id = "ch9-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Slow down. Land on ten, then look back."
+formal = "Land on 10 first. The rest is small."
+
+[[praise]]
+id = "ch9-praise-1"
+text = "Back over the bridge! Well landed."
+formal = "Bridged back through ten."
+
+[[praise]]
+id = "ch9-praise-2"
+text = "You split it at ten like a builder."
+formal = "Take-away split at ten."
+when = "set-end"
+
+[[praise]]
+id = "ch9-praise-3"
+text = "The last bridge is yours. The castle opens!"
+when = "streak"

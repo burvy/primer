@@ -1,0 +1,158 @@
+# Chapter 3: Missing addend within 10. Every set hides the second number.
+# Words: unknown (the hiding number), fact family (same three numbers).
+
+skill = "missing-addend-within-10"
+title = "The Hiding Number"
+
+[[lesson]]
+id = "ch3-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + □ = 7"
+
+[[lesson.step.beat]]
+text = "A pouch holds 3 coins. More coins join it."
+show = "pouches"
+left = 3
+right = 4
+
+[[lesson.step.beat]]
+text = "Now the pouch holds 7 coins. Some number joined."
+show = "pouches"
+left = 3
+right = 4
+join = true
+total = 7
+
+[[lesson.step]]
+stage = "number-line"
+example = "3 + □ = 7"
+
+[[lesson.step.beat]]
+text = "Stand on 3. You must land on 7."
+show = "number-line"
+at = 3
+
+[[lesson.step.beat]]
+text = "Hop forward: 4, 5, 6, 7. Four hops."
+show = "number-line"
+at = 3
+hop = 4
+
+[[lesson.step]]
+stage = "abstract"
+example = "3 + □ = 7"
+
+[[lesson.step.beat]]
+text = 'We write $3 + □ = 7$. The hiding number is called the unknown.'
+formal = 'The hiding number is the unknown. Solve $3 + x = 7$.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'The same three numbers make a fact family: $3 + 4 = 7$ and $7 - 3 = 4$.'
+formal = 'One fact family: $3 + 4 = 7$, $4 + 3 = 7$, $7 - 3 = 4$, $7 - 4 = 3$.'
+show = "equation"
+
+# Family walk: one fact family, four faces. Same three numbers each time.
+[[problem_set]]
+id = "ch3-family-walk"
+stage = "pictorial"
+look = "both"
+pattern = "family"
+problems = ["3 + 4", "3 + □ = 7", "□ + 4 = 7", "4 + 3"]
+question = "Look at the numbers in each sum. What stays the same?"
+notice = "Did you see? Every sum uses 3, 4, and 7. That is a fact family."
+formal_notice = "One fact family: $3 + 4 = 7$, $3 + x = 7$, $x + 4 = 7$, $4 + 3 = 7$."
+
+# Second family, harder numbers, box always second.
+[[problem_set]]
+id = "ch3-family-five"
+stage = "number-line"
+look = "both"
+pattern = "family"
+problems = ["2 + 5", "2 + □ = 7", "5 + □ = 7", "5 + 2"]
+question = "Which three numbers does each sum use?"
+notice = "Did you see? New family, same trick: the hiding number joins."
+formal_notice = "Each sum hides one member of its fact family: $2$, $5$, $7$."
+
+# Missing addends in a row: the box is always second, answers climb.
+[[problem_set]]
+id = "ch3-missing-row"
+stage = "abstract"
+look = "both"
+pattern = "family"
+problems = ["4 + □ = 8", "5 + □ = 9", "6 + □ = 10", "2 + □ = 6"]
+question = "How did you find each hiding number?"
+notice = "Did you see? Count on from the number you see."
+formal_notice = "Each unknown is found by counting on: $x = c - a$."
+
+[[word_problem]]
+id = "ch3-pouch"
+stage = "pictorial"
+look = "both"
+text = "A pouch holds {a} coins. The builder adds more. Now it holds 7. How many did he add?"
+formal = "A pouch holds {a} coins. More join it. Now 7. Find $x$ in ${a} + x = 7$."
+a = 3
+b = 4
+
+[[word_problem]]
+id = "ch3-steps"
+stage = "number-line"
+look = "both"
+text = "The builder stands on step {a}. He climbs to step 9. How many steps did he climb?"
+formal = "From step {a} to step 9. Find $x$ in ${a} + x = 9$."
+a = 4
+b = 5
+
+[[hint]]
+id = "ch3-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand on the first number. Count only the hops."
+formal = "Start on $a$. Each hop is one step toward $c$."
+
+[[hint]]
+id = "ch3-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Count on from the number you see. Stop at the whole."
+formal = "Count on from $a$ to $c$. That count is the unknown."
+
+[[hint]]
+id = "ch3-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "The whole is bigger. Find the gap, not the whole."
+formal = "Do not add what you see. The unknown is $c - a$."
+
+[[hint]]
+id = "ch3-hint-off-by-one-pouches"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Count the coins in the pouch. Then count on."
+formal = "Count on from the coins you see."
+
+[[hint]]
+id = "ch3-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Try a number. Add it on. Too small? Try bigger."
+formal = "Guess, check, adjust. The family tells you when."
+
+[[praise]]
+id = "ch3-praise-1"
+text = "You found the hiding number!"
+formal = "Unknown found."
+
+[[praise]]
+id = "ch3-praise-2"
+text = "The family stays together. Well seen!"
+formal = "Fact family held together."
+when = "set-end"
+
+[[praise]]
+id = "ch3-praise-3"
+text = "Steady counting on."
+when = "streak"

@@ -263,7 +263,8 @@ mod tests {
         let sources = real_content();
         let first = lint(&sources, Some(&fake), &mut cache).await;
         let calls = fake.calls.get();
-        assert_eq!(calls, first.lines, "one call per line");
+        // Repeated lines share one cached answer, so calls can be fewer than lines.
+        assert!(calls > 0 && calls <= first.lines, "at most one call per line");
         let second = lint(&sources, Some(&fake), &mut cache).await;
         assert_eq!(fake.calls.get(), calls, "the re-run is free");
         assert_eq!(first.flagged(), second.flagged());
