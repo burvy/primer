@@ -270,3 +270,24 @@ To restore:
 29. `Remove-NetFirewallRule -DisplayName 'Primer (Cloudflare only)'`
 
 The data in `C:\burvy\data\primer\` stays until you delete it.
+
+## J. Hosted inside burvy.dev
+
+The other way to run it: the portfolio site burvy.dev shows Primer as its
+`/primer` page (the web app is built into the site), and only the server runs
+on the PC. Then there is no Caddy: like `plgroup-server`, `primer-server`
+serves https itself, straight to Cloudflare. The site's README ("# Primer")
+has the step-by-step checklist; this is what the server needs.
+
+| Setting | Meaning |
+|---|---|
+| `PRIMER_ADDR=0.0.0.0:3140` | listen on the port the Cloudflare Origin Rule points at |
+| `PRIMER_TLS_CERT`, `PRIMER_TLS_KEY` | the Cloudflare origin certificate and key (both, or neither: one alone stops the server). Read once at start, so restart to renew. Unset = plain http, as on a laptop |
+| `PRIMER_ALLOWED_ORIGINS=https://burvy.dev` | the pages allowed to call the server from a browser (comma-separated, no trailing slash). Unset = no cross-origin access, as when the server serves its own web app |
+| `PRIMER_GOOGLE_CLIENT_ID` | as in part A; the Google client must list `https://burvy.dev` as an authorised JavaScript origin |
+| `PRIMER_DEV_SIGNIN` | **must not be set** |
+| `DATABASE_URL`, `PRIMER_CONTENT`, `PRIMER_ASSETS`, `PRIMER_JEV_KEY_FILE` | as in the table at the top |
+
+The site calls `https://primer-api.burvy.dev` (set in the site's
+`crates/primer-wasm/src/lib.rs`), so the browser sends the sign-in token
+cross-origin; that is why `PRIMER_ALLOWED_ORIGINS` matters.
