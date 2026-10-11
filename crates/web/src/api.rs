@@ -24,6 +24,47 @@ const TOKEN_KEY: &str = "primer-token";
 thread_local! {
     static TOKEN: RefCell<Option<String>> = const { RefCell::new(None) };
     static CHILD: RefCell<String> = const { RefCell::new(String::new()) };
+    static CONFIG: RefCell<Config> = RefCell::new(Config::default());
+}
+
+/// Where things are, for a page hosted by another site. Both are address
+/// prefixes with no trailing slash. The default is the standalone app: the
+/// server that served the page, and its `/assets`.
+#[derive(Clone)]
+pub struct Config {
+    /// In front of every server address, like `https://api.example.com`
+    /// (the addresses are `/api/...`). Empty means the same server as the page.
+    pub api: String,
+    /// In front of the drawings and sounds, like `/primer/assets`.
+    pub assets: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            api: String::new(),
+            assets: "/assets".into(),
+        }
+    }
+}
+
+/// Keeps `config` for every later call. Also tells `audio.js` where the
+/// sounds are (it reads `window.primerAssets`).
+pub fn configure(config: Config) {
+    if let Some(window) = web_sys::window() {
+        let _ = js_sys::Reflect::set(&window, &"primerAssets".into(), &config.assets.clone().into());
+    }
+    CONFIG.with(|saved| *saved.borrow_mut() = config);
+}
+
+/// The address of a file under `assets/` (`lessons/coin.svg`).
+pub fn asset(path: &str) -> String {
+    CONFIG.with(|config| format!("{}/{path}", config.borrow().assets))
+}
+
+/// A server address (`/api/...`) with the server's prefix in front.
+fn api(path: &str) -> String {
+    CONFIG.with(|config| format!("{}{path}", config.borrow().api))
 }
 
 fn storage() -> Option<web_sys::Storage> {
@@ -54,7 +95,7 @@ pub fn set_child(id: &str) {
 }
 
 fn child_path() -> String {
-    CHILD.with(|child| format!("/api/child/{}", child.borrow()))
+    CHILD.with(|child| api(&format!("/api/child/{}", child.borrow())))
 }
 
 /// The `Authorization` header value, if signed in.
@@ -184,7 +225,7 @@ pub async fn set_audio(settings: &AudioSettings) -> Result<AudioSettings, String
 
 /// How the parent may sign in.
 pub async fn auth_config() -> Result<AuthConfig, String> {
-    read(get("/api/auth/config")?).await
+    read(get(&api("/api/auth/config"))?).await
 }
 
 /// Signs in, keeping the new token.
@@ -195,7 +236,7 @@ async fn keep(session: Result<SessionDto, String>) -> Result<(), String> {
 
 /// The local sign-in (only offered when the server has no Google client id).
 pub async fn dev_sign_in() -> Result<(), String> {
-    keep(read(post_empty("/api/auth/dev")?).await).await
+    keep(read(post_empty(&api("/api/auth/dev"))?).await).await
 }
 
 /// Signs in with what Google's button gave the page.
@@ -203,19 +244,19 @@ pub async fn google_sign_in(credential: &str) -> Result<(), String> {
     let body = GoogleSignIn {
         credential: credential.into(),
     };
-    keep(read(post_to("/api/auth/google", &body)?).await).await
+    keep(read(post_to(&api("/api/auth/google"), &body)?).await).await
 }
 
 /// Signs out: the server forgets the token, and so does the page.
 pub async fn sign_out() {
-    if let Ok(request) = post_empty("/api/auth/sign-out") {
+    if let Ok(request) = post_empty(&api("/api/auth/sign-out")) {
         let _ = done(request).await;
     }
     set_token(None);
 }
 
 pub async fn children() -> Result<Vec<ChildDto>, String> {
-    read(get("/api/children")?).await
+    read(get(&api("/api/children"))?).await
 }
 
 pub async fn create_child(look: &str, age_band: &str) -> Result<ChildDto, String> {
@@ -223,16 +264,16 @@ pub async fn create_child(look: &str, age_band: &str) -> Result<ChildDto, String
         age_band: age_band.into(),
         look: look.into(),
     };
-    read(post_to("/api/children", &body)?).await
+    read(post_to(&api("/api/children"), &body)?).await
 }
 
 pub async fn delete_child(id: &str) -> Result<(), String> {
-    done(delete(&format!("/api/children/{id}"))?).await
+    done(delete(&api(&format!("/api/children/{id}")))?).await
 }
 
 /// Everything stored about the child, as JSON text.
 pub async fn export_child(id: &str) -> Result<String, String> {
-    let response = get(&format!("/api/children/{id}/export"))?
+    let response = get(&api(&format!("/api/children/{id}/export")))?
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -244,19 +285,19 @@ pub async fn export_child(id: &str) -> Result<String, String> {
 
 /// The hero names to pick from.
 pub async fn hero_names() -> Result<Vec<String>, String> {
-    read(get("/api/hero-names")?).await
+    read(get(&api("/api/hero-names"))?).await
 }
 
 /// Sets the hero name. `Err` carries the server's reason when a typed name
 /// is refused ("a hero name is one word", ...).
 pub async fn set_hero(id: &str, name: &str) -> Result<ChildDto, String> {
     let body = HeroRequest { name: name.into() };
-    read(post_to(&format!("/api/children/{id}/hero"), &body)?).await
+    read(post_to(&api(&format!("/api/children/{id}/hero")), &body)?).await
 }
 
 /// Deletes the parent's account and everything under it.
 pub async fn delete_account() -> Result<(), String> {
-    done(delete("/api/account")?).await?;
+    done(delete(&api("/api/account"))?).await?;
     set_token(None);
     Ok(())
 }

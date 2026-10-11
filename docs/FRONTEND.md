@@ -292,3 +292,12 @@ made each real.
 
 New placeholder drawings, made by code and meant to be redrawn: `highlights.svg`,
 `marks.svg`, `textures/deckle.svg` (listed in `docs/ART_GUIDE.md`).
+
+## Hosting Primer inside another site
+
+`crates/web` is also a library. `primer_web::run()` is the standalone app
+(what `main.rs` calls). `primer_web::mount(element, Config { api, assets })`
+puts the app inside a page of another site (burvy-dev does this). `api` is a
+prefix for every `/api/...` address (empty = same server); `assets` is the
+address of the `assets/` folder (default `/assets`). There is no router, so
+there is no base path to set.

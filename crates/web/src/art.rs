@@ -101,7 +101,7 @@ pub fn drawing(path: &str) -> RwSignal<Option<String>> {
     }
     let path = path.to_string();
     leptos::task::spawn_local(async move {
-        let found = api::text(&format!("/assets/{path}")).await.ok();
+        let found = api::text(&api::asset(&path)).await.ok();
         // Only an SVG counts: a server may answer a missing file with a page.
         let found = found
             .filter(|text| text.contains("<svg"))

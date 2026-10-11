@@ -42,6 +42,12 @@
 
   // ---- reading a line aloud -------------------------------------------
 
+  // Where the sounds are: /assets, unless the page is hosted by another site
+  // that says otherwise (src/api.rs `configure`).
+  function assets() {
+    return window.primerAssets || "/assets";
+  }
+
   function say(name, speech) {
     stop();
     if (!settings.narration) return;
@@ -52,8 +58,8 @@
     const line = { audio: null };
     current = line;
     const files = ["ogg", "mp3", "wav"]
-      .map((kind) => `/assets/voice/${address(name)}.${kind}`)
-      .concat(`/assets/voice/placeholder/${address(name)}.wav`);
+      .map((kind) => `${assets()}/voice/${address(name)}.${kind}`)
+      .concat(`${assets()}/voice/placeholder/${address(name)}.wav`);
     playFirst(files, line, speech);
   }
 
@@ -123,7 +129,7 @@
   // little tune made on the spot.
   function sound(name) {
     if (!settings.sounds || !unlocked) return;
-    const file = `/assets/sounds/${address(name)}.ogg`;
+    const file = `${assets()}/sounds/${address(name)}.ogg`;
     if (absent.has(file)) return standIn(name);
     const audio = new Audio(file);
     audio.onerror = () => {
@@ -182,7 +188,7 @@
   // The loops: no stand-in, so without a file they are simply silent.
   function loop(element, name, loudness) {
     if (element) return element;
-    const audio = new Audio(`/assets/sounds/${address(name)}.ogg`);
+    const audio = new Audio(`${assets()}/sounds/${address(name)}.ogg`);
     audio.loop = true;
     audio.volume = loudness;
     audio.onerror = () => {}; // no file yet: stay quiet
