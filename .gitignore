@@ -11,3 +11,6 @@ jev-key.env
 
 # Release builds gathered by tools/deploy/build.ps1, copied to the server by hand.
 /deploy/
+
+# UI audit screenshots: regenerable, kept out of git
+/docs/ui-audit/*.png
