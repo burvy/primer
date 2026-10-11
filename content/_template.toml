@@ -10,7 +10,7 @@ title = "Chapter Title"
 # step has an `example` and one or more `[[lesson.step.beat]]`: one tap, one
 # sentence (`text`, and `formal` for the Exceptional look), one picture (`show`).
 # `show` is tower, pouches, machine, machines, number-line, equation or counters;
-# the other keys (count, adding, at, hop, input, output, highlight, label, open,
+# the other keys (count, adding, at, hop, back, input, output, highlight, label, open,
 # left, right, join, swap, total) are that picture's settings. `$...$` is maths.
 [[lesson]]
 id = "chX-lesson"
@@ -34,6 +34,7 @@ text = "Ada's line on the number line."
 show = "number-line"
 at = 3
 hop = 1
+# Set `back = true` for subtraction hops; it defaults to forward.
 
 [[lesson.step]]
 stage = "abstract"

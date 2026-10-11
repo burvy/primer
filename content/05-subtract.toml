@@ -37,6 +37,8 @@ at = 7
 text = "Land on 4: 6, 5, 4. Three hops back."
 show = "number-line"
 at = 4
+hop = 3
+back = true
 
 [[lesson.step]]
 stage = "abstract"

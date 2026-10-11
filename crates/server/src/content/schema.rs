@@ -152,6 +152,7 @@ pub struct Beat {
     pub adding: Option<u32>,
     pub at: Option<u32>,
     pub hop: Option<u32>,
+    pub back: Option<bool>,
     pub input: Option<u32>,
     pub output: Option<u32>,
     pub highlight: Option<Highlight>,

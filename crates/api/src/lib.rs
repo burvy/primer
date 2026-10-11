@@ -36,6 +36,8 @@ pub struct BeatDto {
     pub adding: Option<u32>,
     pub at: Option<u32>,
     pub hop: Option<u32>,
+    /// Hop backward on a number line (defaults to forward).
+    pub back: Option<bool>,
     pub input: Option<u32>,
     pub output: Option<u32>,
     /// What to light up: a hand-drawn layer of a machine (`"input-glow"`,

@@ -88,6 +88,7 @@ fn beat_dto(
         adding: beat.adding,
         at: beat.at,
         hop: beat.hop,
+        back: beat.back,
         input: beat.input,
         output: beat.output,
         highlight: beat.highlight.map(|h| h.word().to_string()),

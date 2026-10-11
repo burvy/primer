@@ -78,6 +78,13 @@ pub fn machine_lines(fed: &[(u32, Option<u32>)], joined: bool) -> Vec<String> {
 /// The picture for one beat. `match` on the `show` word picks the drawing;
 /// the beat's small settings (`count`, `at`, ...) are handed to it.
 /// `running` is the machine that moves in this beat (see [`machine_progress`]).
+fn number_line_settings(beat: &BeatDto) -> (u32, bool) {
+    let (at, hop) = (beat.at.unwrap_or(0), beat.hop.unwrap_or(0));
+    let back = beat.back.unwrap_or(false);
+    let max = if back { at.max(5) } else { (at + hop).max(5) };
+    (max, !back)
+}
+
 #[component]
 fn Picture(beat: BeatDto, running: Option<usize>) -> impl IntoView {
     match beat.show.as_str() {
@@ -86,8 +93,9 @@ fn Picture(beat: BeatDto, running: Option<usize>) -> impl IntoView {
                 .into_any()
         }
         "number-line" => {
-            let (at, hop) = (beat.at.unwrap_or(0), beat.hop.unwrap_or(0));
-            view! { <NumberLine max=(at + hop).max(5) from=Some(at) hop=hop forward=true /> }
+            let hop = beat.hop.unwrap_or(0);
+            let (max, forward) = number_line_settings(&beat);
+            view! { <NumberLine max=max from=beat.at hop=hop forward=forward /> }
                 .into_any()
         }
         "machine" => view! {
@@ -324,5 +332,15 @@ mod tests {
             machine_lines(&fed, true),
             ["machine 1: in: 3  →  out: 4", "machine 2: in: 4"]
         );
+    }
+
+    #[test]
+    fn number_line_defaults_to_forward_hops() {
+        let beat = BeatDto {
+            at: Some(4),
+            hop: Some(3),
+            ..BeatDto::default()
+        };
+        assert_eq!(number_line_settings(&beat), (7, true));
     }
 }
