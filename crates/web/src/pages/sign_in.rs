@@ -61,30 +61,34 @@ pub fn SignIn(route: RwSignal<Route>) -> impl IntoView {
 
     view! {
         <Frame>
-            <h1>"The Primer"</h1>
-            <p>"A grown-up signs in here. Children do not need to."</p>
+            <h1>"Primer"</h1>
+            <p>"Grown-ups, sign in here!"</p>
             {move || {
-                config.get().map(|found| match found.google_client_id {
-                    Some(client_id) => {
-                        view! { <GoogleButton client_id on_credential=on_google /> }.into_any()
-                    }
-                    // No Google: the local test button, but only if the server
-                    // says it is on (`dev_sign_in`).
-                    None if found.dev_sign_in => view! {
-                        <p class="note">
-                            "Local test sign-in: no Google account is set up on this server."
-                        </p>
-                        <button type="button" class="next" on:click=on_dev>
-                            "Sign in (local test)"
-                        </button>
-                    }
-                    .into_any(),
-                    // Neither: signing in is switched off.
-                    None => view! {
-                        <p class="note">"Sign-in is not set up on this server."</p>
-                    }
-                    .into_any(),
-                })
+                config
+                    .get()
+                    .map(|found| match found.google_client_id {
+                        Some(client_id) => {
+                            view! { <GoogleButton client_id on_credential=on_google /> }.into_any()
+                        }
+                        None if found.dev_sign_in => {
+                            // No Google: the local test button, but only if the server
+                            // says it is on (`dev_sign_in`).
+                            view! {
+                                <p class="note">
+                                    "Local test sign-in: no Google account is set up on this server."
+                                </p>
+                                <button type="button" class="next" on:click=on_dev>
+                                    "Sign in (local test)"
+                                </button>
+                            }
+                                .into_any()
+                        }
+                        None => {
+                            // Neither: signing in is switched off.
+                            view! { <p class="note">"Sign-in is not set up on this server."</p> }
+                                .into_any()
+                        }
+                    })
             }}
             <p class="note error">{move || error.get()}</p>
             <p>

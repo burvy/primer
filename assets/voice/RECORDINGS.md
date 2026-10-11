@@ -150,3 +150,25 @@ the browser's own voice.
 | `ch2-praise-4.gentle` | gentle | The builder thanks you for helping him manage his money! | placeholder |
 | `ch2-praise-5.gentle` | gentle | You saw the rule before Ada said it. | placeholder |
 | `ch2-praise-5.exceptional` | exceptional | You found the rule before Ada stated it. | placeholder |
+| `explain.question.gentle` | gentle | How did you work it out? | placeholder |
+| `explain.question.exceptional` | exceptional | How did you work it out? Which way did you use? | placeholder |
+| `explain.counted_all.gentle` | gentle | I counted them all | placeholder |
+| `explain.counted_all.exceptional` | exceptional | I counted every one, from 1 | placeholder |
+| `explain.counted_on.gentle` | gentle | I counted on | placeholder |
+| `explain.counted_on.exceptional` | exceptional | I started at the bigger number and counted on | placeholder |
+| `explain.just_knew.gentle` | gentle | I just knew | placeholder |
+| `explain.just_knew.exceptional` | exceptional | I remembered it | placeholder |
+| `explain.guessed.gentle` | gentle | I guessed | placeholder |
+| `explain.guessed.exceptional` | exceptional | I made a guess | placeholder |
+| `feel.question.gentle` | gentle | How are you feeling? | placeholder |
+| `feel.question.exceptional` | exceptional | How are you feeling right now? | placeholder |
+| `feel.happy.gentle` | gentle | Happy | placeholder |
+| `feel.happy.exceptional` | exceptional | Happy | placeholder |
+| `feel.ok.gentle` | gentle | OK | placeholder |
+| `feel.ok.exceptional` | exceptional | Fine | placeholder |
+| `feel.stuck.gentle` | gentle | Stuck | placeholder |
+| `feel.stuck.exceptional` | exceptional | Stuck | placeholder |
+| `feel.tired.gentle` | gentle | Tired | placeholder |
+| `feel.tired.exceptional` | exceptional | Tired | placeholder |
+| `rest.gentle` | gentle | Let's rest the pencil. Take a big breath. The next one is a little easier. | placeholder |
+| `rest.exceptional` | exceptional | Let's rest the pencil for a moment. Breathe in, breathe out. The next one is a little easier. | placeholder |
