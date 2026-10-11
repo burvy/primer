@@ -118,7 +118,6 @@ formal = "Let there be a pouch of 3 coins."
 show = "pouches"
 left = 3
 right = 5
-total = 8
 
 [[lesson.step.beat]]
 text = "And another pouch of 5."
@@ -126,7 +125,6 @@ formal = "And another with 5."
 show = "pouches"
 left = 3
 right = 5
-total = 8
 
 [[lesson.step.beat]]
 text = "Together, there are 8 coins."
@@ -148,7 +146,6 @@ text = "A pouch of 5 and a pouch of 3."
 show = "pouches"
 left = 5
 right = 3
-swap = true
 
 [[lesson.step.beat]]
 text = "There are still 8 coins altogether."
