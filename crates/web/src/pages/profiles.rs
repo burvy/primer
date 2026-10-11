@@ -40,6 +40,7 @@ pub fn Profiles(route: RwSignal<Route>) -> impl IntoView {
                                     .hero_name
                                     .clone()
                                     .unwrap_or_else(|| "New reader".to_string());
+                                let details = format!("age {} · {}", child.age_band, child.look);
                                 let go = child.clone();
                                 view! {
                                     <button type="button" class="next choice"
@@ -49,7 +50,8 @@ pub fn Profiles(route: RwSignal<Route>) -> impl IntoView {
                                                 None => Route::Hero(go.clone()),
                                             })
                                         }>
-                                        {label}
+                                        <span>{label}</span>
+                                        <span class="small">{details}</span>
                                     </button>
                                 }
                             })

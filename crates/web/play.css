@@ -40,6 +40,13 @@ body {
   display: block;
   margin: 0.5rem auto 0;
 }
+/* In the keypad it is the last key: same size as the others, smaller words. */
+.keypad .dont-know {
+  margin: 0;
+  padding: 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.15;
+}
 .maths {
   font-family: var(--maths-font);
 }
@@ -50,6 +57,19 @@ body {
 }
 .machine-io {
   font-family: var(--maths-font);
+}
+/* The numbers under the machines read like a ruled caption, not like debug text. */
+.machine-numbers {
+  text-align: center;
+  margin-bottom: var(--gap);
+}
+.machine-numbers .machine-io {
+  display: block;
+  width: fit-content;
+  margin: 0.2rem auto;
+  padding: 0 0.75rem 0.1rem;
+  color: var(--ink);
+  border-bottom: 1px solid var(--ink-soft);
 }
 .picture {
   display: block;
@@ -245,9 +265,10 @@ body {
   }
 }
 
-/* The sheet colour behind a machine drawing would hide the other machine, so
- * in the joined view the drawing's plain background rectangle is not shown. */
-.machines .machine svg > rect:first-of-type {
+/* The drawing's plain background rectangle is never shown: in the joined view
+ * it would hide the other machine, and alone it shows as a slab against the
+ * page's paper texture. */
+.machine svg > rect:first-of-type {
   display: none;
 }
 .machines .machine svg {
@@ -628,9 +649,49 @@ body.speaking .ada #mouth-closed {
   text-decoration: underline;
   cursor: pointer;
 }
+/* An empty message takes no room (the old min-height left a gap above the
+ * links under it). */
 .error {
   color: var(--mark);
-  min-height: 1.5em;
+  margin: 0;
+}
+/* Plain links, such as "Save the export file", follow the palette. */
+.book a {
+  color: var(--ink-soft);
+}
+.panel label {
+  display: inline-block;
+  margin: 0.25rem 0.5rem;
+}
+/* Long text in a panel (the privacy page) reads left-aligned. */
+.panel ul {
+  text-align: left;
+  max-width: 32rem;
+  margin: var(--gap) auto;
+  padding-left: 1.25rem;
+}
+.panel li {
+  margin: 0.75rem 0;
+}
+/* The reader buttons and hero names. */
+.next .small {
+  color: inherit;
+  opacity: 0.85;
+}
+.small {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.next.choice {
+  flex-direction: column;
+}
+.choices.names {
+  gap: 0.5rem;
+}
+.names .choice {
+  min-height: 3rem;
+  padding: 0.4rem 0.5rem;
+  white-space: nowrap;
 }
 .panel input[type="text"],
 .panel select {

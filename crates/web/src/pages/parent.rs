@@ -56,10 +56,10 @@ pub fn Gate(route: RwSignal<Route>) -> impl IntoView {
 }
 
 /// Reloads the list of readers.
-fn refresh(children: RwSignal<Vec<ChildDto>>, error: RwSignal<String>) {
+fn refresh(children: RwSignal<Option<Vec<ChildDto>>>, error: RwSignal<String>) {
     spawn_local(async move {
         match api::children().await {
-            Ok(all) => children.set(all),
+            Ok(all) => children.set(Some(all)),
             Err(message) => error.set(message),
         }
     });
@@ -73,7 +73,8 @@ fn twice(armed: bool, first: &'static str, second: &'static str) -> &'static str
 
 #[component]
 pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
-    let children = RwSignal::new(Vec::<ChildDto>::new());
+    // `None` until the list has arrived, so "no readers yet" is not flashed.
+    let children = RwSignal::new(None::<Vec<ChildDto>>);
     let error = RwSignal::new(String::new());
     // The reader whose "Delete" was tapped once (tap again to delete).
     let deleting = RwSignal::new(None::<String>);
@@ -117,8 +118,13 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
             <h1>"Grown-ups"</h1>
             <h2>"Readers"</h2>
             {move || {
-                children
-                    .get()
+                let all = children.get()?;
+                if all.is_empty() {
+                    return Some(
+                        view! { <p class="note">"No readers yet. Add one below."</p> }.into_any(),
+                    );
+                }
+                Some(all
                     .into_iter()
                     .map(|child| {
                         let name = child.hero_name.clone().unwrap_or_else(|| "(no hero name yet)".to_string());
@@ -168,6 +174,7 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
                         }
                     })
                     .collect_view()
+                    .into_any())
             }}
             {move || {
                 export.get().map(|(file, href)| {

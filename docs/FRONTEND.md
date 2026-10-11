@@ -213,3 +213,37 @@ book is not in this folder at all: that is `content/*.toml`.
 | the look of a button | `.next`, `.go`, `.dont-know`, `.link`, `.choice` in `play.css` |
 | a picture | `assets/` (draw it) and `crates/web/src/components/pictures.rs` (how it is placed) |
 | what a page does when tapped | the `on:click` next to that button |
+
+## How batch 1 was done
+
+Each fix from `docs/ui-audit/README.md` (items 1 to 9), and the rule or
+component that did it. Read the diff next to this list.
+
+1. **Answer underline too low.** `.equation .box` in `style.css` got
+   `line-height: 1.1`. The page's line height is 1.6, so a bordered box inherited
+   a tall line and its bottom border fell far below the digits.
+2. **Privacy list hard to read.** `.panel ul` in `play.css`: `text-align: left`
+   (the panel is centred), a `max-width`, left padding, and `.panel li` spacing.
+3. **Blue link, odd form fields.** `.book a { color: var(--ink-soft) }` (browsers
+   colour links blue unless a rule says otherwise); `.panel label` spaced so the
+   two pickers wrap tidily.
+4. **Hero picker.** In `pages/hero.rs` the "type your own" block now comes before
+   the names (order in `view!` is order on the page); `.choices.names` and
+   `.names .choice` make the buttons shorter, and `white-space: nowrap` stops
+   "al-Khwarizmi" breaking at its hyphen.
+5. **Empty states.** `.error` lost `min-height` (an empty message no longer
+   leaves a gap); the parent page shows "No readers yet" once the list has
+   loaded (`None` until it arrives, so it never flashes); each reader button in
+   `pages/profiles.rs` shows age and look in a `.small` line.
+6. **Keypad.** `.keypad` is now `repeat(3, 1fr)` with a `max-width` (columns share
+   the width instead of being fixed pixels), `--key-size` grew to 4rem, and
+   "I don't know" moved *inside* the grid in `components/keypad.rs` so it fills
+   the empty last slot (`.keypad .dont-know` for its smaller words).
+7. **Machine numbers.** `.machine-numbers .machine-io`: ink colour, centred, a thin
+   rule under each line, like a ruled caption.
+8. **Slab behind the single machine.** `.machine svg > rect:first-of-type` is now
+   hidden for one machine too (it already was for the joined view).
+9. **Card hugging the top on a laptop.** In the `min-width: 48rem` block of
+   `style.css`, `.shell` gets `padding-top: clamp(1rem, 8vh, 4rem)`: some air,
+   that grows with the window but stays small. (True vertical centring would
+   make the page jump between beats of different height, so it is not used.)

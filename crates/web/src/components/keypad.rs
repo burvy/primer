@@ -16,9 +16,10 @@ pub fn Keypad(#[prop(into)] on_key: Callback<Key>) -> impl IntoView {
                 "⌫"
             </button>
             {digit(0)}
+            // The last slot of the grid: not a digit, so it has its own look.
+            <button type="button" class="dont-know" on:click=move |_| on_key.run(Key::DontKnow)>
+                "I don't know"
+            </button>
         </div>
-        <button type="button" class="dont-know" on:click=move |_| on_key.run(Key::DontKnow)>
-            "I don't know"
-        </button>
     }
 }

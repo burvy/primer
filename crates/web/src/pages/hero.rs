@@ -44,7 +44,19 @@ pub fn Hero(child: ChildDto, route: RwSignal<Route>) -> impl IntoView {
     view! {
         <Frame>
             <h1>"Pick your hero name"</h1>
-            <div class="choices">
+            <p>"Type a name you make up (not a real name), or pick one below."</p>
+            <p>
+                <input type="text" maxlength="12" aria-label="A hero name"
+                    prop:value=move || typed.get()
+                    on:input=move |event| typed.set(event_target_value(&event)) />
+                <button type="button" class="next"
+                    disabled=move || typed.get().trim().is_empty()
+                    on:click=move |_| choose.run(typed.get_untracked())>
+                    "Use this name"
+                </button>
+            </p>
+            <p class="note error">{move || error.get()}</p>
+            <div class="choices names">
                 {move || {
                     names
                         .get()
@@ -61,18 +73,6 @@ pub fn Hero(child: ChildDto, route: RwSignal<Route>) -> impl IntoView {
                         .collect_view()
                 }}
             </div>
-            <p>"Or type a name you make up. Do not use a real name."</p>
-            <p>
-                <input type="text" maxlength="12" aria-label="A hero name"
-                    prop:value=move || typed.get()
-                    on:input=move |event| typed.set(event_target_value(&event)) />
-                <button type="button" class="next"
-                    disabled=move || typed.get().trim().is_empty()
-                    on:click=move |_| choose.run(typed.get_untracked())>
-                    "Use this name"
-                </button>
-            </p>
-            <p class="note error">{move || error.get()}</p>
             <p>
                 <button type="button" class="link" on:click=move |_| route.set(Route::Profiles)>
                     "Back"

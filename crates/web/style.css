@@ -39,7 +39,7 @@
   --text-size: 1.25rem;
   --text-line: 1.6;
   --equation-size: 2.5rem;
-  --key-size: 3.5rem;
+  --key-size: 4rem;
 
   --texture-paper: url("../../assets/textures/paper-gentle.svg");
   --texture-ada: url("../../assets/ada/ada-silhouette.svg");
@@ -142,6 +142,9 @@
 .equation .box {
   display: inline-block;
   min-width: 1.4em;
+  /* The page's line height (1.6) would put the underline far below the
+   * digits; inside the box the line is tight, so the rule hugs the number. */
+  line-height: 1.1;
   border-bottom: 3px solid var(--ink);
   text-align: center;
 }
@@ -149,13 +152,14 @@
 /* Keypad mock: large keys a small finger can hit on a phone. */
 .keypad {
   display: grid;
-  grid-template-columns: repeat(3, var(--key-size));
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: var(--gap);
+  /* Three columns that share the width, up to a comfortable maximum. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  max-width: 18rem;
+  margin: var(--gap) auto 0;
 }
 .keypad button {
-  width: var(--key-size);
+  width: 100%;
   height: var(--key-size);
   font-family: var(--maths-font);
   font-size: 1.5rem;
@@ -179,6 +183,9 @@
 
 /* Roomier layout on a Chromebook-width screen. */
 @media (min-width: 48rem) {
+  .shell {
+    padding-top: clamp(1rem, 8vh, 4rem);
+  }
   :root {
     --page-padding: 2.5rem;
     --text-size: 1.375rem;
