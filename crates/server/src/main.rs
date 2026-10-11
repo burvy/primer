@@ -8,6 +8,11 @@
 //! `PRIMER_GOOGLE_CLIENT_ID` turns on Google sign-in. `PRIMER_DEV_SIGNIN=1`
 //! turns on the local test sign-in instead (never both: the server refuses
 //! to start). With neither, nobody can sign in.
+//! `PRIMER_TLS_CERT` and `PRIMER_TLS_KEY` (both, or neither) make it serve
+//! https from those files; `PRIMER_ALLOWED_ORIGINS` (like
+//! `https://burvy.dev`, comma-separated) lets those pages call it from a
+//! browser. Both are for when another site hosts the app; unset, nothing
+//! changes.
 //! `PRIMER_JEV_KEY_FILE` (jev-key.env) names the Jev key file; with no such
 //! file the server uses the fake judge.
 //!
@@ -17,8 +22,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use axum::http::{HeaderValue, Method, header};
+use axum_server::tls_rustls::RustlsConfig;
 use primer_server::routes::AppState;
 use primer_server::{config, content, db, jev, judge, routes, voices};
+use tower_http::cors::CorsLayer;
 
 /// `#[tokio::main]` turns `async fn main` into a normal `main` that starts
 /// tokio, the engine that runs async code, and waits for it to finish.
@@ -70,10 +78,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         sign_in,
         http: reqwest::Client::new(),
     };
-    let app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));
+    let mut app = routes::router(state, PathBuf::from(dist), PathBuf::from(assets));
 
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("primer listening on http://{addr}");
-    axum::serve(listener, app).await?;
+    // Another site (burvy.dev) hosting the app is a different origin, so the
+    // browser only lets it call us if we say so. (Same as plgroup-server.)
+    let origins = config::allowed_origins(std::env::var("PRIMER_ALLOWED_ORIGINS").ok())?;
+    if let Some(origins) = origins {
+        let allowed = origins
+            .iter()
+            .map(|o| o.parse::<HeaderValue>())
+            .collect::<Result<Vec<_>, _>>()?;
+        println!("cors: {}", origins.join(", "));
+        app = app.layer(
+            CorsLayer::new()
+                .allow_origin(allowed)
+                .allow_methods([Method::GET, Method::POST, Method::DELETE])
+                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),
+        );
+    }
+
+    match config::Tls::from_env()? {
+        Some(tls) => {
+            // The certificate is read once, now; restart to pick up a new one.
+            let rustls = RustlsConfig::from_pem_file(&tls.cert, &tls.key).await?;
+            println!("primer listening on https://{addr}");
+            axum_server::bind_rustls(addr.parse::<std::net::SocketAddr>()?, rustls)
+                .serve(app.into_make_service())
+                .await?;
+        }
+        None => {
+            let listener = tokio::net::TcpListener::bind(&addr).await?;
+            println!("primer listening on http://{addr}");
+            axum::serve(listener, app).await?;
+        }
+    }
     Ok(())
 }

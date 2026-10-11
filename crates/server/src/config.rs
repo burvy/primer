@@ -117,10 +117,92 @@ impl SignIn {
     }
 }
 
+/// Optional HTTPS, for when the server is reached straight from the internet
+/// (hosted inside burvy.dev). Both settings, or neither.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tls {
+    /// `PRIMER_TLS_CERT`: the certificate file (PEM).
+    pub cert: String,
+    /// `PRIMER_TLS_KEY`: its private key file (PEM).
+    pub key: String,
+}
+
+impl Tls {
+    /// Reads the two settings. Neither set means plain http, as on a laptop.
+    /// Only one set is an error, so a half-made set-up is seen at once
+    /// instead of quietly serving plain http.
+    pub fn from_env() -> Result<Option<Tls>, String> {
+        let read = |name| std::env::var(name).ok().filter(|v: &String| !v.is_empty());
+        Tls::decide(read("PRIMER_TLS_CERT"), read("PRIMER_TLS_KEY"))
+    }
+
+    /// The rule, as a pure function so it can be tested.
+    pub fn decide(cert: Option<String>, key: Option<String>) -> Result<Option<Tls>, String> {
+        match (cert, key) {
+            (Some(cert), Some(key)) => Ok(Some(Tls { cert, key })),
+            (None, None) => Ok(None),
+            _ => Err("PRIMER_TLS_CERT and PRIMER_TLS_KEY must be set together".into()),
+        }
+    }
+}
+
+/// The pages allowed to call this server from a browser: the comma-separated
+/// `PRIMER_ALLOWED_ORIGINS` (like `https://burvy.dev`). `None` when unset,
+/// which means no cross-origin access at all, as when the server serves its
+/// own web app.
+pub fn allowed_origins(raw: Option<String>) -> Result<Option<Vec<String>>, String> {
+    let Some(raw) = raw.filter(|v| !v.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let origins: Vec<String> = raw.split(',').map(|o| o.trim().to_string()).collect();
+    for origin in &origins {
+        // An origin is a scheme and a host, no path: a trailing slash would
+        // never match what the browser sends.
+        if !(origin.starts_with("http://") || origin.starts_with("https://"))
+            || origin.ends_with('/')
+        {
+            return Err(format!(
+                "PRIMER_ALLOWED_ORIGINS: {origin:?} is not an origin like https://burvy.dev"
+            ));
+        }
+    }
+    Ok(Some(origins))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use secrecy::ExposeSecret;
+
+    #[test]
+    fn tls_needs_both_files_or_neither() {
+        let some = |s: &str| Some(s.to_string());
+        assert_eq!(Tls::decide(None, None), Ok(None));
+        assert_eq!(
+            Tls::decide(some("c.pem"), some("k.pem")),
+            Ok(Some(Tls {
+                cert: "c.pem".into(),
+                key: "k.pem".into()
+            }))
+        );
+        assert!(Tls::decide(some("c.pem"), None).is_err());
+        assert!(Tls::decide(None, some("k.pem")).is_err());
+    }
+
+    #[test]
+    fn allowed_origins_are_a_clean_list_or_nothing() {
+        assert_eq!(allowed_origins(None), Ok(None));
+        assert_eq!(allowed_origins(Some("  ".into())), Ok(None));
+        assert_eq!(
+            allowed_origins(Some("https://burvy.dev, http://localhost:8080".into())),
+            Ok(Some(vec![
+                "https://burvy.dev".into(),
+                "http://localhost:8080".into()
+            ]))
+        );
+        assert!(allowed_origins(Some("burvy.dev".into())).is_err());
+        assert!(allowed_origins(Some("https://burvy.dev/".into())).is_err());
+    }
 
     /// A made-up key in a temporary file; the real key file is never opened.
     #[test]
