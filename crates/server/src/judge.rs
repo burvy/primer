@@ -78,3 +78,35 @@ impl Judge for FakeJudge {
 
 /// A shareable handle to whichever judge is in use.
 pub type SharedJudge = Arc<dyn Judge>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use primer_core::Op;
+
+    #[test]
+    fn the_unknown_judgment_says_nothing() {
+        assert_eq!(Judgment::UNKNOWN.mistake, MistakeKind::Unknown);
+        assert_eq!(Judgment::UNKNOWN.strategy, Strategy::Unknown);
+        assert!(!Judgment::UNKNOWN.frustrated);
+    }
+
+    #[tokio::test]
+    async fn the_fake_judge_always_says_it_does_not_know() {
+        let problem = Problem::new(3, Op::Add, 4).unwrap();
+        let judgment = FakeJudge
+            .judge(&problem, Some(99), Some("I counted on"))
+            .await;
+        assert_eq!(judgment, Judgment::UNKNOWN);
+        // The default `mistake` reads that back as "no name for it".
+        assert_eq!(FakeJudge.mistake(&problem, 99).await, MistakeKind::Unknown);
+    }
+
+    #[tokio::test]
+    async fn the_fake_judge_lets_every_typed_name_through() {
+        // The code rule on names still applies; this judge only says yes.
+        assert!(!FakeJudge.identifying("Ada").await);
+        assert!(!FakeJudge.identifying("12 School Road").await);
+        assert!(!FakeJudge.identifying("").await);
+    }
+}
