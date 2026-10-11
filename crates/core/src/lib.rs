@@ -4,6 +4,7 @@
 //! changes nothing outside itself. That makes it trivial to test, and lets
 //! this crate build for both the server (native) and the browser (wasm).
 
+pub mod explain;
 mod generate;
 pub mod grown_up;
 mod hero_name;
@@ -18,6 +19,7 @@ mod problem;
 mod problem_set;
 mod skill;
 
+pub use explain::{AskRules, Asks, Feeling, Reflection};
 pub use generate::generate;
 pub use hero_name::{HeroName, HeroNameError, MAX_LETTERS};
 pub use keypad::{Input, Key, key_named, press};

@@ -12,12 +12,12 @@
 //! program compiles (that would need a database at build time).
 
 use primer_api::AudioSettings;
-use primer_core::{Attempt, Event, Look, Outcome, Problem, Skill, Strategy};
+use primer_core::{Attempt, Event, Look, Outcome, Problem, Reflection, Skill, Strategy};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::names::{BLANKS, LOOKS, MISTAKES, OPS, STAGES, name, parse};
+use crate::names::{BLANKS, FEELINGS, LOOKS, MISTAKES, OPS, STAGES, STRATEGIES, name, parse};
 
 /// Opens (creating if needed) the database at `url` and brings its tables up
 /// to date with the files in `migrations/`.
@@ -315,8 +315,13 @@ pub async fn append(pool: &SqlitePool, child_id: &str, event: &Event) -> Result<
 /// The JSON form of an event. The core's types hold `&'static str` skill ids
 /// and plain enums, which JSON cannot hold directly, so we store words and
 /// rebuild the real values on the way out.
+///
+/// Clippy warns that `Attempt` is much bigger than `Lesson`. That matters
+/// for values kept in large numbers; a `Stored` lives only for the moment
+/// one row is written or read, so the plain shape is kept.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[expect(clippy::large_enum_variant, reason = "short-lived; see above")]
 enum Stored {
     Lesson {
         skill: String,
@@ -336,6 +341,19 @@ enum Stored {
         outcome: String,
         mistake: Option<String>,
         ms_taken: u32,
+        /// Older rows have none of the fields below; `default` reads them
+        /// as "unknown", "not frustrated" and "nothing tapped".
+        /// A word from `STRATEGIES`, such as `"counted_on"`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        strategy: Option<String>,
+        #[serde(default)]
+        frustrated: bool,
+        /// The id of the explanation choice tapped (never free text).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        explanation: Option<String>,
+        /// `"happy"`, `"ok"`, `"stuck"` or `"tired"`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        feeling: Option<String>,
     },
 }
 
@@ -364,6 +382,11 @@ fn encode(event: &Event) -> Stored {
                 outcome: outcome.to_string(),
                 mistake,
                 ms_taken: at.ms_taken,
+                strategy: (at.strategy != Strategy::Unknown)
+                    .then(|| name(STRATEGIES, at.strategy).to_string()),
+                frustrated: at.frustrated,
+                explanation: at.reflection.explanation.clone(),
+                feeling: at.reflection.feeling.map(|f| name(FEELINGS, f).to_string()),
             }
         }
     }
@@ -390,6 +413,10 @@ fn decode(stored: Stored) -> Option<Event> {
             outcome,
             mistake,
             ms_taken,
+            strategy,
+            frustrated,
+            explanation,
+            feeling,
         } => {
             let outcome = match outcome.as_str() {
                 "correct" => Outcome::Correct,
@@ -405,9 +432,15 @@ fn decode(stored: Stored) -> Option<Event> {
                 answer,
                 outcome,
                 ms_taken,
-                // Not collected yet (slice 11 adds strategy and frustration).
-                strategy: Strategy::Unknown,
-                frustrated: false,
+                // An unknown word is read as "unknown", not as a broken row.
+                strategy: strategy
+                    .and_then(|word| parse(STRATEGIES, &word))
+                    .unwrap_or(Strategy::Unknown),
+                frustrated,
+                reflection: Reflection {
+                    explanation,
+                    feeling: feeling.and_then(|word| parse(FEELINGS, &word)),
+                },
             }))
         }
     }
@@ -422,7 +455,7 @@ fn skill_id(id: &str) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use primer_core::{Blank, MistakeKind, Op, SKILLS, Stage};
+    use primer_core::{Blank, Feeling, MistakeKind, Op, SKILLS, Stage};
 
     #[test]
     fn events_survive_a_round_trip_through_json() {
@@ -435,8 +468,12 @@ mod tests {
             answer: Some(5),
             outcome: Outcome::Wrong(MistakeKind::OffByOne),
             ms_taken: 1234,
-            strategy: Strategy::Unknown,
-            frustrated: false,
+            strategy: Strategy::CountOn,
+            frustrated: true,
+            reflection: Reflection {
+                explanation: Some("counted_on".into()),
+                feeling: Some(Feeling::Stuck),
+            },
         });
         let lesson = Event::LessonSeen {
             skill: SKILLS[0].id,

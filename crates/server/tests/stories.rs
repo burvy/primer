@@ -77,6 +77,7 @@ fn stories_told(content: &Content, look: Look) -> BTreeSet<String> {
                     ms_taken: 3_000,
                     strategy: Strategy::Unknown,
                     frustrated: false,
+                    reflection: Default::default(),
                 })
             }
         };

@@ -112,7 +112,7 @@ fn beat_dto(
 /// A line of the book as the page wants it: both wordings as HTML (maths as
 /// MathML), and how Ada reads them. `id` names the recordings. Every
 /// unreadable wording is reported, not only the first.
-fn note(id: &str, text: &str, formal: Option<&str>) -> Result<NoteDto, Vec<String>> {
+pub(super) fn note(id: &str, text: &str, formal: Option<&str>) -> Result<NoteDto, Vec<String>> {
     let text_html = to_html(text);
     let formal_html = formal.map(to_html).transpose();
     match (text_html, formal_html) {

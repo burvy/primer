@@ -209,6 +209,38 @@ Slices 1–3 are done. New in this revision: 3b, 3c, 13b; 5, 12 and 13 changed.
 - **Files:** `README.md`, `docs/{PLAYTEST,PRIVACY,DEPLOY}.md`.
 - **Done when:** a fresh clone can follow the README to a running app.
 
+## 16. The child explains, by tapping — `stanley`
+- **Goal:** after a wrong answer, and after the first right answer of each set,
+  Ada asks "How did you work it out?" (3–4 picture choices); after a wrong
+  answer, "I don't know" or two slow answers in a row, "How are you feeling?"
+  (happy / ok / stuck / tired). Taps only, voiced, skippable. Only the choice
+  ids are stored. Stuck or tired is frustration: Ada shows "Let's rest the
+  pencil" and the next problem is a stage easier (the learner's `struggling`).
+- **Files:** `content/explain.toml` (draft wording), `crates/core/src/explain.rs`
+  (when to ask, pure), `crates/server/src/content/explain.rs`, the answer route,
+  `crates/web/src/components/reflect.rs`.
+- **Note:** taps call no AI (as DESIGN.md says): the choice's `strategy` is
+  kept and stuck/tired is frustration. Jev still names a slip code cannot, and
+  `judge.judge` will read typed or spoken explanations later.
+
+## Later: speech-to-text and a chat with Ada
+- **Goal:** a child who cannot type yet *says* how they worked it out, and,
+  later, talks with Ada about a problem.
+- **Speech-to-text:** the browser records only while the child holds a button;
+  the audio goes to a speech-to-text service from the server (keys stay
+  server-side), and the text is judged like a typed explanation (strategy
+  Choice, frustration Noul), then dropped. Neither audio nor text is stored:
+  only the judged strategy and frustration, as today. Needs a privacy note,
+  a grown-up switch (off by default) and a check that the service keeps
+  nothing.
+- **Chat with Ada (design note):** the v1 rule stays: **no AI-written text is
+  shown or read to a child.** A chat would let the AI *choose* among lines a
+  human wrote (a Choice over line ids in `content/`, like hints and praise), never
+  write new ones. Every line still passes `primer-lint`; unsure → a safe default
+  line ("Let's try it together").
+- **Done when:** designed with the human; not before the tap version has been
+  playtested.
+
 ---
 
 **Parallel work:** 3b, 3c, 4, 7, 13 and 15 (drafts) can start now. 5 needs 3b

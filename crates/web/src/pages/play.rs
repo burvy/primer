@@ -8,7 +8,8 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use primer_api::{ChildDto, ContentsDto, AnswerRequest, AnswerResponse, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
+use primer_api::{ChildDto, ContentsDto, AnswerRequest, AnswerResponse, AskDto, AudioSettings, NoteDto, OpenerDto, PageDto, ProblemDto, SetEndDto};
+use primer_core::explain::{AskRules, asks};
 use primer_core::{Input, Key, Look, key_named, press};
 
 use crate::api;
@@ -22,6 +23,7 @@ use crate::components::lesson::LessonPage;
 use crate::components::look_switch::{LookSwitch, word};
 use crate::components::notes::AdaSays;
 use crate::components::pictures::{NumberLine, TenFrame, cells};
+use crate::components::reflect::Reflect;
 
 /// What the page is showing. An `enum` makes the impossible impossible: the
 /// page is loading, or broken, or on a server page, or showing the verdict.
@@ -56,6 +58,46 @@ enum Screen {
         notice: NoteDto,
         next: PageDto,
     },
+    /// After the child answers, before the answer is sent: Ada asks how they
+    /// worked it out (`explain`) and/or how they feel (`feel`). What they tap
+    /// goes into `body`, and then the answer is sent.
+    Ask {
+        body: AnswerRequest,
+        ask: Box<AskDto>,
+        explain: bool,
+        feel: bool,
+    },
+    /// "Let's rest the pencil": the child said they were stuck or tired.
+    /// "Carry on" goes on as the feedback would have.
+    Rest {
+        note: NoteDto,
+        set_end: Option<SetEndDto>,
+        next: PageDto,
+    },
+}
+
+/// Sends an answer, and shows what Ada says about it.
+fn send(body: AnswerRequest, screen: RwSignal<Screen>) {
+    spawn_local(async move {
+        screen.set(match api::answer(&body).await {
+            Ok(reply) => Screen::Feedback(Box::new(reply)),
+            Err(message) => Screen::Failed(message),
+        });
+    });
+}
+
+/// The number hidden behind the blank: what a right answer is.
+fn hidden(problem: &ProblemDto) -> u32 {
+    let whole = if problem.op == "add" {
+        problem.a + problem.b
+    } else {
+        problem.a.saturating_sub(problem.b)
+    };
+    match problem.blank.as_str() {
+        "first" => problem.a,
+        "second" => problem.b,
+        _ => whole,
+    }
 }
 
 /// What follows an answer's feedback: the set's question and notice when the
@@ -210,6 +252,32 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
             .into_any()
     }
     Screen::Feedback(reply) => view! { <Feedback reply=*reply look screen /> }.into_any(),
+    Screen::Ask { body, ask, explain, feel } => {
+        // One question at a time: "how" first, then "feel"; then send.
+        let question = if explain { ask.explain.clone() } else { ask.feel.clone() };
+        let on_done = move |tapped: Option<String>| {
+            let mut body = body.clone();
+            if explain {
+                body.explanation = tapped;
+            } else {
+                body.feeling = tapped;
+            }
+            if explain && feel {
+                screen.set(Screen::Ask { body, ask: ask.clone(), explain: false, feel });
+            } else {
+                send(body, screen);
+            }
+        };
+        view! { <Reflect question look on_done /> }.into_any()
+    }
+    Screen::Rest { note, set_end, next } => view! {
+        <AdaSays note look />
+        <button type="button" class="next"
+            on:click=move |_| screen.set(after_feedback(set_end.clone(), next.clone()))>
+            "Carry on ▸"
+        </button>
+    }
+    .into_any(),
     Screen::Question { question, notice, next } => {
         let on_see = move |_| {
             screen.set(match notice.clone() {
@@ -254,9 +322,9 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
         };
         view! { <LessonPage beats look on_done /> }.into_any()
     }
-    Screen::Page(PageDto::Practice { page_id, problem, stage, story, .. }) => {
+    Screen::Page(PageDto::Practice { page_id, problem, stage, story, ask, .. }) => {
         let story = story.map(|boxed| *boxed);
-        view! { <Practice page_id problem stage story look screen /> }.into_any()
+        view! { <Practice page_id problem stage story ask look screen /> }.into_any()
     }
     Screen::Page(PageDto::Story) => {
         view! { <p>"The end of this part of the book."</p> }.into_any()
@@ -303,10 +371,12 @@ fn Practice(
     problem: ProblemDto,
     stage: String,
     story: Option<NoteDto>,
+    ask: Option<Box<AskDto>>,
     look: RwSignal<Look>,
     screen: RwSignal<Screen>,
 ) -> impl IntoView {
     let input = RwSignal::new(Input::Empty);
+    let right_answer = hidden(&problem);
     let busy = RwSignal::new(false);
     let started = js_sys::Date::now();
 
@@ -320,14 +390,32 @@ fn Practice(
         let body = AnswerRequest {
             page_id: page_id.clone(),
             answer: input.get_untracked().answer(),
+            // Measured now: time spent on Ada's questions does not count.
             ms_taken: (js_sys::Date::now() - started) as u32,
+            explanation: None,
+            feeling: None,
         };
-        spawn_local(async move {
-            screen.set(match api::answer(&body).await {
-                Ok(reply) => Screen::Feedback(Box::new(reply)),
-                Err(message) => Screen::Failed(message),
-            });
+        // Should Ada ask something first? The rule is the core's; the page
+        // only knows whether the answer is right.
+        let asked = ask.as_ref().map(|ask| {
+            let rules = AskRules {
+                first_right_in_set: ask.first_right_in_set,
+                slow_before: ask.slow_before,
+            };
+            let right = body.answer.map(|given| given == right_answer);
+            asks(rules, right, body.ms_taken, ask.slow_ms)
         });
+        match (ask.clone(), asked) {
+            (Some(ask), Some(asked)) if asked.explain || asked.feel => {
+                // Changed on the next turn of the event loop, not now: the
+                // new screen removes this problem, and with it this very
+                // callback, which must finish running first.
+                spawn_local(async move {
+                    screen.set(Screen::Ask { body, ask, explain: asked.explain, feel: asked.feel });
+                });
+            }
+            _ => send(body, screen),
+        }
     });
     let on_key = move |key: Key| {
         input.update(|current| *current = press(*current, key));
@@ -426,14 +514,20 @@ fn Feedback(reply: AnswerResponse, look: RwSignal<Look>, screen: RwSignal<Screen
         (false, _, Some(hint)) => Some(hint),
         _ => None,
     };
-    let (set_end, next) = (reply.set_end, reply.next);
+    let (set_end, next, rest) = (reply.set_end, reply.next, reply.rest);
+    // A child who said they were stuck or tired gets a rest page first.
+    let on_continue = move |_| {
+        screen.set(match rest.clone() {
+            Some(note) => Screen::Rest { note, set_end: set_end.clone(), next: next.clone() },
+            None => after_feedback(set_end.clone(), next.clone()),
+        })
+    };
     view! {
         {match said {
             Some(note) => view! { <AdaSays note look /> }.into_any(),
             None => view! { <p class="note">{stub}</p> }.into_any(),
         }}
-        <button type="button" class="next"
-            on:click=move |_| screen.set(after_feedback(set_end.clone(), next.clone()))>
+        <button type="button" class="next" on:click=on_continue>
             "Continue ▸"
         </button>
     }

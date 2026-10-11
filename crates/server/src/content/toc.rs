@@ -141,6 +141,7 @@ mod tests {
             ms_taken: 3_000,
             strategy: Strategy::Unknown,
             frustrated: false,
+            reflection: Default::default(),
         })
     }
 

@@ -13,7 +13,7 @@ use super::lesson::Ada;
 /// The HTML and the line to read aloud for `look`: the Exceptional look uses
 /// the `formal` wording when the note has one (and then it has its own line),
 /// otherwise both looks read the plain one.
-fn wording(note: &NoteDto, look: Look) -> (String, LineDto) {
+pub fn wording(note: &NoteDto, look: Look) -> (String, LineDto) {
     match (look, &note.formal, &note.voice.exceptional) {
         (Look::Exceptional, Some(formal), Some(line)) => (formal.clone(), line.clone()),
         _ => (note.text.clone(), note.voice.gentle.clone()),

@@ -407,6 +407,14 @@ mod tests {
     use primer_core::Op;
     use secrecy::SecretString;
 
+    /// `explain.toml` names strategies with `names::STRATEGIES`; Jev answers
+    /// with the words here. They must be the same words for the same thing.
+    #[test]
+    fn jev_and_the_content_use_the_same_strategy_words() {
+        let ours: Vec<_> = STRATEGIES.iter().map(|&(s, w, _)| (s, w)).collect();
+        assert_eq!(ours, crate::names::STRATEGIES);
+    }
+
     fn fixture(json: &str) -> Response {
         serde_json::from_str(json).expect("fixture decodes")
     }

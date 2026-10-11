@@ -1,0 +1,92 @@
+# What Ada asks after some answers, and the pictures the child taps.
+#
+# DRAFT: every line below is a first draft by Stanley (an agent), for the
+# human to rewrite. Nothing here has been read by a child yet.
+#
+# When Ada asks (the rule is in crates/core/src/explain.rs):
+#   "How did you work it out?"  after a wrong answer, and after the first
+#                               right answer of each set.
+#   "How are you feeling?"      after a wrong answer or "I don't know", and
+#                               after two slow answers in a row.
+# Every question can be skipped. Only the `id` of the tapped choice is
+# stored, never any words.
+#
+# Each line has `gentle` (the Gentle look) and `formal` (the Exceptional
+# look). Both are read aloud; their recordings are named
+# `explain.<id>.<look>`, `feel.<id>.<look>` and `rest.<look>`, like the rest
+# of the book (see assets/voice/RECORDINGS.md).
+#
+# `picture` is one character shown big on the button: an emoji for now,
+# until there are drawings.
+
+[explain]
+gentle = "How did you work it out?"
+formal = "How did you work it out? Which way did you use?"
+
+# 3 or 4 choices. `strategy` says what each one means, in the words Jev uses:
+# counted_all, counted_on, made_ten, doubles, just_knew, unclear.
+# A tap needs no AI: the choice's `strategy` is what is kept.
+
+[[explain.choice]]
+id = "counted_all"
+picture = "🖐️"
+gentle = "I counted them all"
+formal = "I counted every one, from 1"
+strategy = "counted_all"
+
+[[explain.choice]]
+id = "counted_on"
+picture = "👉"
+gentle = "I counted on"
+formal = "I started at the bigger number and counted on"
+strategy = "counted_on"
+
+[[explain.choice]]
+id = "just_knew"
+picture = "💡"
+gentle = "I just knew"
+formal = "I remembered it"
+strategy = "just_knew"
+
+[[explain.choice]]
+id = "guessed"
+picture = "🎲"
+gentle = "I guessed"
+formal = "I made a guess"
+strategy = "unclear"
+
+[feel]
+gentle = "How are you feeling?"
+formal = "How are you feeling right now?"
+
+# Exactly these four ids, in this order. Stuck and tired mean "frustrated":
+# Ada then suggests a rest (below) and the next problem is a step easier.
+
+[[feel.choice]]
+id = "happy"
+picture = "😊"
+gentle = "Happy"
+formal = "Happy"
+
+[[feel.choice]]
+id = "ok"
+picture = "🙂"
+gentle = "OK"
+formal = "Fine"
+
+[[feel.choice]]
+id = "stuck"
+picture = "😣"
+gentle = "Stuck"
+formal = "Stuck"
+
+[[feel.choice]]
+id = "tired"
+picture = "😴"
+gentle = "Tired"
+formal = "Tired"
+
+# Shown after the answer's feedback when the child is stuck or tired.
+[rest]
+gentle = "Let's rest the pencil. Take a big breath. The next one is a little easier."
+formal = "Let's rest the pencil for a moment. Breathe in, breathe out. The next one is a little easier."

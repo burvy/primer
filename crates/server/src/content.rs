@@ -13,6 +13,7 @@
 
 pub mod check;
 mod convert;
+pub mod explain;
 pub mod feedback;
 mod math;
 pub mod schema;
@@ -57,6 +58,9 @@ pub struct Content {
     set_ends: HashMap<String, SetEndDto>,
     /// The hero names a child may pick, from `hero_names.toml`.
     pub hero_names: Vec<String>,
+    /// What Ada asks after some answers, from `explain.toml`. `None` until
+    /// that file is written: then nothing is asked.
+    pub explain: Option<explain::Explain>,
     /// What is not written yet. Not errors: the server prints them at start.
     pub gaps: Vec<String>,
     /// Every line Ada reads aloud, in book order: the list for the voice actor.
@@ -171,7 +175,8 @@ impl Content {
     /// Checks and builds the content from `(file name, file text)` pairs.
     ///
     /// Which file is which is decided by its name: `words.toml` is the
-    /// vocabulary, `hero_names.toml` the hero names, a name starting with a
+    /// vocabulary, `hero_names.toml` the hero names, `explain.toml` the
+    /// questions Ada asks after answers, a name starting with a
     /// digit (`02-add.toml`) is a chapter, and anything else (`_template.toml`)
     /// is left alone.
     ///
@@ -182,6 +187,7 @@ impl Content {
         let mut chapters: Vec<(String, ChapterFile)> = Vec::new();
         let mut words: Option<WordsFile> = None;
         let mut hero_names: Vec<String> = Vec::new();
+        let mut explain: Option<explain::Explain> = None;
 
         for (name, text) in sources {
             if name == "words.toml" {
@@ -200,6 +206,14 @@ impl Content {
                     }
                     Err(error) => errors.push(ContentError::new(name, "", error.to_string())),
                 }
+            } else if name == explain::FILE {
+                match toml::from_str::<explain::ExplainFile>(text) {
+                    Ok(file) => match explain::build(&file) {
+                        Ok(built) => explain = Some(built),
+                        Err(found) => errors.extend(found),
+                    },
+                    Err(error) => errors.push(ContentError::new(name, "", error.to_string())),
+                }
             } else if name.starts_with(|c: char| c.is_ascii_digit()) {
                 match toml::from_str::<ChapterFile>(text) {
                     Ok(file) => chapters.push((name.clone(), file)),
@@ -216,10 +230,14 @@ impl Content {
         if !errors.is_empty() {
             return Err(errors);
         }
-        let lines = built.lines();
+        let mut lines = built.lines();
         let mut gaps = check::coverage(&chapters, words.as_ref());
         if hero_names.is_empty() {
             gaps.push("hero_names.toml: no names to pick from".to_string());
+        }
+        match &explain {
+            Some(explain) => lines.extend(explain.lines()),
+            None => gaps.push(format!("{}: not written yet, so Ada asks nothing", explain::FILE)),
         }
         Ok(Content {
             gentle: built.chapters(Look::Gentle),
@@ -230,6 +248,7 @@ impl Content {
             sayings: built.sayings,
             set_ends: built.set_ends,
             hero_names,
+            explain,
             gaps,
             lines,
         })
