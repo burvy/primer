@@ -395,6 +395,7 @@ mod tests {
             adding: Some(4),
             at: Some(7),
             hop: Some(2),
+            back: None,
             input: Some(3),
             output: Some(7),
             highlight: Some("addends".into()),
