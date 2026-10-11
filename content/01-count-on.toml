@@ -125,7 +125,13 @@ highlight = "output"
 
 [[lesson.step.beat]]
 text = "A machine like this is called a function."
-formal = "A machine like this is a function. We name it f and write $f(3) = 4$."
+formal = "A machine like this is a function."
+show = "machine"
+label = "+1"
+
+[[lesson.step.beat]]
+text = "We name it f and write $f(3) = 4$."
+formal = "We name it f and write $f(3) = 4$."
 show = "machine"
 label = "+1"
 

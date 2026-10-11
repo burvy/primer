@@ -15,14 +15,27 @@ stage = "pictorial"
 example = "3 + 4"
 
 [[lesson.step.beat]]
-text = "A builder has two money pouches for buying stones. One with 3 gold coins, another with 4 gold coins."
+text = "A builder has two money pouches for buying stones."
 show = "pouches"
 left = 3
 right = 4
 
 [[lesson.step.beat]]
-text = "The builder spills both pouches onto a tower step. How many coins are on that tower step?"
-formal = "The builder spills both pouches on a step. How many coins are on the step?"
+text = "One has 3 gold coins, another has 4 gold coins."
+show = "pouches"
+left = 3
+right = 4
+
+[[lesson.step.beat]]
+text = "The builder spills both pouches onto a tower step."
+show = "pouches"
+left = 3
+right = 4
+join = true
+
+[[lesson.step.beat]]
+text = "How many coins are on that tower step?"
+formal = "How many coins are on the step?"
 show = "pouches"
 left = 3
 right = 4
@@ -51,7 +64,11 @@ stage = "abstract"
 example = "3 + 4"
 
 [[lesson.step.beat]]
-text = "We write it as $3 + 4 = 7$. A number sentence like this is an equation."
+text = "We write it as $3 + 4 = 7$."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "A number sentence like this is an equation."
 formal = "$3 + 4 = 7$ is an equation: a sentence made of numbers."
 show = "equation"
 
@@ -96,23 +113,54 @@ stage = "pictorial"
 example = "3 + 5"
 
 [[lesson.step.beat]]
-text = "Let the builder have a pouch of 3 coins and another pouch of 5. Together, there are 8 coins."
-formal = "Let there be a pouch of 3 coins and another with 5. Together, there are 8 coins."
+text = "Let the builder have a pouch of 3 coins."
+formal = "Let there be a pouch of 3 coins."
 show = "pouches"
 left = 3
 right = 5
 total = 8
 
 [[lesson.step.beat]]
-text = "Now the pouches swap places. A pouch of 5 and a pouch of 3."
+text = "And another pouch of 5."
+formal = "And another with 5."
+show = "pouches"
+left = 3
+right = 5
+total = 8
+
+[[lesson.step.beat]]
+text = "Together, there are 8 coins."
+formal = "Together, there are 8 coins."
+show = "pouches"
+left = 3
+right = 5
+total = 8
+
+[[lesson.step.beat]]
+text = "Now the pouches swap places."
 show = "pouches"
 left = 5
 right = 3
 swap = true
 
 [[lesson.step.beat]]
-text = "There are still 8 coins altogether. Swapping the pouches did not change their sum."
-formal = "Their sum is still 8. Swapping did not change their sum."
+text = "A pouch of 5 and a pouch of 3."
+show = "pouches"
+left = 5
+right = 3
+swap = true
+
+[[lesson.step.beat]]
+text = "There are still 8 coins altogether."
+formal = "Their sum is still 8."
+show = "pouches"
+left = 5
+right = 3
+total = 8
+
+[[lesson.step.beat]]
+text = "Swapping the pouches did not change their sum."
+formal = "Swapping did not change their sum."
 show = "pouches"
 left = 5
 right = 3
@@ -123,22 +171,45 @@ stage = "abstract"
 example = "3 + 5"
 
 [[lesson.step.beat]]
-text = "$3 + 5 = 5 + 3$. This is the swap rule. Swapping numbers does not change the sum."
-formal = "$3 + 5 = 5 + 3$. Addition is commutative. Swapping numbers does not change the sum."
+text = "$3 + 5 = 5 + 3$. This is the swap rule."
+formal = "$3 + 5 = 5 + 3$. Addition is commutative."
 show = "equation"
 
 [[lesson.step.beat]]
-text = "This is called commutativity. The order in which you add numbers does not matter."
+text = "Swapping numbers does not change the sum."
+formal = "Swapping numbers does not change the sum."
 show = "equation"
 
 [[lesson.step.beat]]
-text = 'A collection of things is called a set. The numbers we count with, $0, 1, 2, 3, \dots$, form a set called the natural numbers, written $\mathbb{N}$.'
-formal = 'A collection of things is called a set. The counting numbers $0, 1, 2, 3, \dots$ form a set called the natural numbers, written $\mathbb{N}$.'
+text = "This is called commutativity."
 show = "equation"
 
 [[lesson.step.beat]]
-text = 'For any numbers $a$ and $b$ in $\mathbb{N}$, $a + b = b + a$. The sums are the same no matter the order.'
-formal = 'For every $a$ and $b$ in $\mathbb{N}$: $a + b = b + a$.'
+text = "The order in which you add numbers does not matter."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "A collection of things is called a set."
+formal = "A collection of things is called a set."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "The numbers we count with form a set."
+formal = "The counting numbers form a set."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "It is called the natural numbers, written $\\mathbb{N}$."
+formal = "The natural numbers are written $\\mathbb{N}$."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "For any numbers $a$ and $b$ in $\\mathbb{N}$, $a + b = b + a$."
+formal = "For every $a$ and $b$ in $\\mathbb{N}$: $a + b = b + a$."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "The sums are the same no matter the order."
 show = "equation"
 
 [[problem_set]]
@@ -182,8 +253,14 @@ input = 7
 output = 7
 
 [[lesson.step.beat]]
-text = "A number that changes nothing is called the identity. For any number, adding 0 gives you the same number."
-formal = 'Zero is the identity for addition. For every $a$ in $\mathbb{N}$: $a + 0 = a$.'
+text = "A number that changes nothing is called the identity."
+formal = "Zero is the identity for addition."
+show = "machine"
+label = "+0"
+
+[[lesson.step.beat]]
+text = "For any number, adding 0 gives you the same number."
+formal = "For every $a$ in $\\mathbb{N}$: $a + 0 = a$."
 show = "machine"
 label = "+0"
 
