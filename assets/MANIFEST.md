@@ -23,3 +23,6 @@
 | `assets/ornaments/divider.svg` | Section divider ornament | 1 KB | none | both | placeholder |
 | `assets/seals/proved-exceptional.svg` | "Proved Exceptional" seal, Byrne red/yellow/blue | 1 KB | none | exceptional | placeholder |
 | `assets/lessons/function-machine.svg` | Chapter 1 +1 machine | 3 KB | body, funnel, chute, front-panel, input-glow, output-glow, hatch-closed, hatch-open, block, gear, pipe | both | placeholder |
+| `assets/textures/deckle.svg` | Torn page edge of the Gentle look | 1 KB | path | gentle | placeholder |
+| `assets/lessons/marks.svg` | Tick and cross beside a checked answer | 1 KB | tick, cross | both | placeholder |
+| `assets/lessons/highlights.svg` | Hand-drawn highlight strokes | 1 KB | circle, underline, arrow, bracket | both | placeholder |
