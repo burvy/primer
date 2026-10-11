@@ -340,3 +340,277 @@ pub struct NewChild {
 pub struct HeroRequest {
     pub name: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The value as JSON, and back again: the two must be the same value.
+    fn round_trip<T>(value: &T)
+    where
+        T: Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
+    {
+        let json = serde_json::to_string(value).expect("the value as JSON");
+        let back: T = serde_json::from_str(&json).expect("the same JSON read back");
+        assert_eq!(&back, value);
+    }
+
+    fn line(name: &str, speech: &str) -> LineDto {
+        LineDto {
+            name: name.into(),
+            speech: speech.into(),
+        }
+    }
+
+    fn note(text: &str) -> NoteDto {
+        NoteDto {
+            text: text.into(),
+            formal: Some(format!("<em>{text}</em>")),
+            voice: VoiceDto {
+                gentle: line("hint.gentle", text),
+                exceptional: Some(line("hint.exceptional", text)),
+            },
+        }
+    }
+
+    fn problem() -> ProblemDto {
+        ProblemDto {
+            a: 3,
+            op: "add".into(),
+            b: 4,
+            blank: "answer".into(),
+            text: "3 + 4".into(),
+        }
+    }
+
+    /// A beat with every field set, so nothing can be lost in the JSON.
+    fn beat() -> BeatDto {
+        BeatDto {
+            text: "Put 3 and 4 together".into(),
+            formal: Some("3 plus 4".into()),
+            show: "machine".into(),
+            count: Some(3),
+            adding: Some(4),
+            at: Some(7),
+            hop: Some(2),
+            input: Some(3),
+            output: Some(7),
+            highlight: Some("addends".into()),
+            label: Some("3".into()),
+            open: Some(true),
+            left: Some(3),
+            right: Some(4),
+            join: Some(true),
+            swap: Some(false),
+            total: Some(7),
+            image: Some("machine.png".into()),
+            voice: Some(VoiceDto {
+                gentle: line("beat.1.gentle", "Three and four"),
+                exceptional: Some(line("beat.1.exceptional", "Three and four make seven")),
+            }),
+        }
+    }
+
+    fn question(id: &str, words: &str) -> QuestionDto {
+        QuestionDto {
+            question: note(words),
+            choices: vec![ChoiceDto {
+                id: id.into(),
+                picture: "B".into(),
+                note: note("I counted on"),
+            }],
+        }
+    }
+
+    fn ask() -> AskDto {
+        AskDto {
+            first_right_in_set: true,
+            slow_before: false,
+            slow_ms: 30_000,
+            explain: question("counted_on", "How did you work it out?"),
+            feel: question("happy", "How are you feeling?"),
+        }
+    }
+
+    fn practice_page() -> PageDto {
+        PageDto::Practice {
+            page_id: "page-1".into(),
+            skill: "count-on-within-5".into(),
+            set_id: "ch1-a".into(),
+            problem: problem(),
+            stage: "pictorial".into(),
+            hint: Some("off_by_one".into()),
+            easier: true,
+            story: Some(Box::new(note("Three birds joined by four."))),
+            ask: Some(Box::new(ask())),
+        }
+    }
+    #[test]
+    fn a_problem_dto_round_trips() {
+        round_trip(&problem());
+    }
+
+    #[test]
+    fn a_fully_set_beat_round_trips() {
+        round_trip(&beat());
+        // An almost-empty beat loses nothing either.
+        round_trip(&BeatDto {
+            text: "Now you try".into(),
+            ..Default::default()
+        });
+    }
+
+    #[test]
+    fn a_note_and_a_set_end_round_trip() {
+        round_trip(&note("Well done."));
+        round_trip(&SetEndDto {
+            question: Some(note("Did you see it?")),
+            notice: Some(note("Two machines in a row.")),
+        });
+        round_trip(&SetEndDto::default());
+    }
+
+    #[test]
+    fn every_page_variant_round_trips() {
+        round_trip(&PageDto::Lesson {
+            skill: "count-on-within-5".into(),
+            lesson: "intro".into(),
+            again: false,
+            beats: vec![beat()],
+            opener: Some(OpenerDto {
+                number: 1,
+                title: "Counting on".into(),
+            }),
+        });
+        round_trip(&practice_page());
+        round_trip(&PageDto::Story);
+        round_trip(&PageDto::EndOfBook);
+    }
+
+    #[test]
+    fn a_page_carries_its_type_tag() {
+        let story = serde_json::to_value(PageDto::Story).expect("story as JSON");
+        assert_eq!(story, serde_json::json!({ "type": "story" }));
+        let practice = serde_json::to_value(practice_page()).expect("practice as JSON");
+        assert_eq!(practice["type"], "practice");
+        let end = serde_json::to_value(PageDto::EndOfBook).expect("end as JSON");
+        assert_eq!(end["type"], "end_of_book");
+    }
+
+    #[test]
+    fn an_answer_request_and_response_round_trip() {
+        round_trip(&AnswerRequest {
+            page_id: "page-1".into(),
+            answer: Some(7),
+            ms_taken: 1_200,
+            explanation: Some("counted_on".into()),
+            feeling: Some("happy".into()),
+        });
+        round_trip(&AnswerResponse {
+            correct: false,
+            mistake: Some("off_by_one".into()),
+            hint: Some(note("One more or one less.")),
+            praise: None,
+            set_end: Some(SetEndDto {
+                question: Some(note("Did you see it?")),
+                notice: None,
+            }),
+            rest: Some(note("Let's rest the pencil.")),
+            next: practice_page(),
+        });
+        round_trip(&LessonSeenRequest {
+            skill: "count-on-within-5".into(),
+            lesson: "intro".into(),
+        });
+        round_trip(&LookRequest {
+            look: "exceptional".into(),
+        });
+        round_trip(&PracticeRequest { skill: None });
+    }
+
+    #[test]
+    fn an_answer_without_the_optional_taps_parses() {
+        // The browser may skip both questions: the fields default to none.
+        let json = r#"{"page_id": "page-1", "answer": 7, "ms_taken": 1200}"#;
+        let request: AnswerRequest = serde_json::from_str(json).expect("a bare answer");
+        assert_eq!(
+            request,
+            AnswerRequest {
+                page_id: "page-1".into(),
+                answer: Some(7),
+                ms_taken: 1_200,
+                explanation: None,
+                feeling: None,
+            }
+        );
+    }
+
+    #[test]
+    fn the_child_and_sign_in_dtos_round_trip() {
+        round_trip(&ChildDto {
+            id: "child-1".into(),
+            hero_name: Some("Ada".into()),
+            age_band: "5-6".into(),
+            look: "gentle".into(),
+        });
+        round_trip(&NewChild {
+            age_band: "7-8".into(),
+            look: "exceptional".into(),
+        });
+        round_trip(&HeroRequest { name: "Ada".into() });
+        round_trip(&AuthConfig {
+            google_client_id: Some("client-123".into()),
+            dev_sign_in: false,
+        });
+        round_trip(&GoogleSignIn {
+            credential: "a-token".into(),
+        });
+        round_trip(&SessionDto {
+            token: "a-secret".into(),
+        });
+    }
+
+    #[test]
+    fn the_contents_round_trip() {
+        round_trip(&ContentsDto {
+            chapters: vec![ChapterDto {
+                number: 1,
+                skill: "count-on-within-5".into(),
+                title: "Counting on".into(),
+                status: "current".into(),
+                items: vec![
+                    ItemDto {
+                        kind: "lesson".into(),
+                        id: "intro".into(),
+                        label: "Lesson 1".into(),
+                        state: "done".into(),
+                        done: 1,
+                        total: 1,
+                    },
+                    ItemDto {
+                        kind: "set".into(),
+                        id: "ch1-a".into(),
+                        label: "Practice 1".into(),
+                        state: "started".into(),
+                        done: 2,
+                        total: 6,
+                    },
+                ],
+            }],
+        });
+        round_trip(&ContentsDto::default());
+    }
+
+    #[test]
+    fn sounds_are_on_and_music_is_off_by_default() {
+        assert_eq!(
+            AudioSettings::default(),
+            AudioSettings {
+                narration: true,
+                sounds: true,
+                music: false,
+            }
+        );
+        round_trip(&AudioSettings::default());
+    }
+}

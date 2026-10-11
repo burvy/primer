@@ -5,3 +5,7 @@ edition.workspace = true
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
+
+# Tests only: the DTOs are promised to survive JSON, which needs a format.
+[dev-dependencies]
+serde_json = "1.0.152"
