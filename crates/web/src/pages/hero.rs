@@ -64,7 +64,7 @@ pub fn Hero(child: ChildDto, route: RwSignal<Route>) -> impl IntoView {
                         .map(|name| {
                             let pick = name.clone();
                             view! {
-                                <button type="button" class="next choice"
+                                <button type="button" class="choice"
                                     on:click=move |_| choose.run(pick.clone())>
                                     {name}
                                 </button>

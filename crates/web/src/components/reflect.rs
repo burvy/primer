@@ -11,7 +11,7 @@ use primer_core::Look;
 
 use crate::audio;
 
-use super::equation::RichText;
+use super::equation::{RichText, Stroke};
 use super::notes::{AdaSays, wording};
 
 /// One question and its choices. `on_done` gets the id of the choice
@@ -30,13 +30,14 @@ pub fn Reflect(
         <AdaSays note=question.question look />
         <div class="choices">{choices.collect_view()}</div>
         <div class="choice-actions">
-            <button type="button" class="dont-know" on:click=move |_| on_done.run(None)>
-                "Skip ▸"
+            <button type="button" class="quiet" on:click=move |_| on_done.run(None)>
+                "Skip"
             </button>
-            <button type="button" class="go"
+            <button type="button" class="turn"
                 disabled=move || picked.get().is_none()
                 on:click=move |_| on_done.run(picked.get_untracked())>
                 "Done ▸"
+                <Stroke kind="equals" />
             </button>
         </div>
     }

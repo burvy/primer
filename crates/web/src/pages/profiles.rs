@@ -43,7 +43,7 @@ pub fn Profiles(route: RwSignal<Route>) -> impl IntoView {
                                 let details = format!("age {} · {}", child.age_band, child.look);
                                 let go = child.clone();
                                 view! {
-                                    <button type="button" class="next choice"
+                                    <button type="button" class="choice"
                                         on:click=move |_| {
                                             route.set(match go.hero_name {
                                                 Some(_) => Route::Play(go.clone()),

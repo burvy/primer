@@ -286,3 +286,23 @@ These are your decisions; the code can do any of them.
   today's 0.9 rem (the Music label and the progress notes).
 - No code paths are broken in the screens above; every screen opened and
   closed correctly in both looks and at both sizes.
+
+## Decisions (human, 2026-10-10)
+
+1. **Buttons.** Next / Continue = the word with a hand-drawn underline stroke
+   (`highlights.svg`, layer `underline`). Check (the main answer action) = an
+   ink-stamped label. Delete and other dangerous actions = a red (`mark`) drawn
+   frame. Skip, Back, I don't know = plain small text.
+2. **Toolbar.** One small running head in book style ("Contents · Grown-ups");
+   the look and sound switches sit behind one small settings mark.
+3. **Page frame.** Gentle: a torn deckle edge with a soft shadow, from a file
+   (`assets/textures/deckle.svg`, a placeholder the human can redraw).
+   Exceptional: Byrne's thin border.
+4. **Ada on phone.** A small portrait beside her line, in lessons as in practice.
+5. **Right / wrong.** A drawn tick (ink) or cross (`mark` red) beside the
+   answer, with the equation written out with the answer in
+   (`assets/lessons/marks.svg`, layers `tick` and `cross`).
+6. **Chapter finished = mastered.** Show "you did it, skipped some" when steps
+   were not read, and leave those steps openable.
+
+Batch 2 (items 10 to 16) was done with these; see `docs/FRONTEND.md`.

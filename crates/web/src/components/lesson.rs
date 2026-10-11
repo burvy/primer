@@ -7,6 +7,7 @@ use primer_core::Look;
 use crate::art;
 use crate::audio;
 
+use super::buttons::Turn;
 use super::equation::{LabelEquation, RichText};
 use super::pictures::{Counters, Machine, Machines, NumberLine, Pouches, Tower};
 
@@ -191,7 +192,6 @@ pub fn LessonPage(
 
     view! {
         <div class="lesson">
-            <Ada on_tap=move |()| read_aloud(step.get_untracked(), look.get_untracked()) />
             // The picture. `leaf` plays the page-turn each time a new beat is drawn.
             {move || {
                 let beat = beats.with_value(|all| all.get(step.get()).cloned()).unwrap_or_default();
@@ -222,13 +222,15 @@ pub fn LessonPage(
                     (Look::Exceptional, Some(formal)) => formal.clone(),
                     _ => beat.text.clone(),
                 };
+                // Ada beside her line, as on the practice pages.
                 view! {
-                    <div class="leaf">
-                        <p><RichText text=text /></p>
+                    <div class="leaf says">
+                        <Ada on_tap=move |()| read_aloud(step.get_untracked(), look.get_untracked()) />
+                        <p class="said"><RichText text=text /></p>
                     </div>
                 }
             }}
-            <button type="button" class="next" on:click=move |_| {
+            <Turn on_click=move |()| {
                 audio::sound("page-turn");
                 if step.get() >= last {
                     on_done.run(());
@@ -237,7 +239,7 @@ pub fn LessonPage(
                 }
             }>
                 {move || if step.get() >= last { "Done" } else { "Next ▸" }}
-            </button>
+            </Turn>
         </div>
     }
 }

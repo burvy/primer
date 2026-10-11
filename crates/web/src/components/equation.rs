@@ -72,7 +72,7 @@ pub fn LabelEquation(label: String, highlight: Option<String>) -> impl IntoView 
 /// just the layer that fits and draws it on, stroke by stroke. With no file
 /// this draws nothing, and the word keeps its plain colour and underline.
 #[component]
-fn Stroke(kind: &'static str) -> impl IntoView {
+pub fn Stroke(kind: &'static str) -> impl IntoView {
     let art = art::drawing("lessons/highlights.svg");
     let layer = match kind {
         "addends" => "bracket",

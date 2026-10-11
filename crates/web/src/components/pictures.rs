@@ -304,11 +304,20 @@ pub fn NumberLine(
     #[prop(optional)] target: Option<u32>,
 ) -> impl IntoView {
     let x = move |n: u32| n * STEP + 15;
+    // The picture is shrunk to fit the page, so a long line (up to 20) would
+    // shrink its numerals to nothing. Make them bigger in proportion to the
+    // line, and write every second number when the line is long.
+    let width = max * STEP + 30;
+    let size = 17.0 * (width as f32 / 300.0).max(1.0);
+    let every = if max > 10 { 2 } else { 1 };
+    let label_y = 52.0 + size;
     let ticks = (0..=max)
         .map(|n| {
+            let label = (n % every == 0)
+                .then(|| view! { <text class="label" x=x(n) y=label_y style=format!("font-size: {size}px")>{n}</text> });
             view! {
                 <line class="tick" x1=x(n) y1=40 x2=x(n) y2=48 />
-                <text class="label" x=x(n) y=64>{n}</text>
+                {label}
             }
         })
         .collect_view();
@@ -353,7 +362,7 @@ pub fn NumberLine(
     });
     let ring = target.map(|goal| view! { <circle class="target" cx=x(goal) cy=40 r=9 /> });
     view! {
-        <svg class="picture" viewBox=format!("0 0 {} 72", max * STEP + 30)>
+        <svg class="picture" viewBox=format!("0 0 {width} {}", label_y + 8.0)>
             <line class="tick" x1=x(0) y1=40 x2=x(max) y2=40 />
             {ticks}
             {hops}

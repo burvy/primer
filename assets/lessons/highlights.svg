@@ -1,0 +1,17 @@
+<!-- PLACEHOLDER highlight strokes, drawn by code. The human redraws them in
+     Inkscape with the Pencil tool (docs/ART_GUIDE.md, item 5). Each layer is
+     one stroke, in the direction it should draw. Keep the ids. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <g id="circle" fill="none" stroke="#a63d2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 210 22 C 330 8, 392 110, 380 205 C 368 330, 255 392, 165 380 C 55 368, 12 270, 24 170 C 36 70, 120 30, 238 30"/>
+  </g>
+  <g id="underline" fill="none" stroke="#a63d2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 8 372 C 90 356, 160 384, 240 366 C 300 354, 350 376, 392 360"/>
+  </g>
+  <g id="arrow" fill="none" stroke="#a63d2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 14 204 C 120 192, 250 210, 372 198 M 326 150 C 346 172, 362 188, 376 198 C 360 212, 344 228, 322 252"/>
+  </g>
+  <g id="bracket" fill="none" stroke="#a63d2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 10 292 C 8 350, 14 378, 60 384 C 150 378, 250 390, 340 382 C 388 376, 392 350, 390 292"/>
+  </g>
+</svg>

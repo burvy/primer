@@ -1,0 +1,11 @@
+<!-- PLACEHOLDER tick and cross, drawn by code. The human redraws them
+     (docs/ART_GUIDE.md, item 14): one pencil stroke for the tick, two for the
+     cross. Keep the ids. The tick is ink, the cross is the `mark` red. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <g id="tick" fill="none" stroke="#3b2a1e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 14 54 C 24 62, 32 72, 38 84 C 52 52, 70 28, 90 12"/>
+  </g>
+  <g id="cross" fill="none" stroke="#a63d2f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 16 14 C 38 38, 62 62, 86 88 M 86 12 C 64 38, 40 64, 14 86"/>
+  </g>
+</svg>

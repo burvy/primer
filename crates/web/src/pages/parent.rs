@@ -47,7 +47,7 @@ pub fn Gate(route: RwSignal<Route>) -> impl IntoView {
             </p>
             <p class="note error">{move || wrong.get().then_some("Not quite. Try this one.")}</p>
             <p>
-                <button type="button" class="link" on:click=move |_| route.set(Route::Profiles)>
+                <button type="button" class="quiet" on:click=move |_| route.set(Route::Profiles)>
                     "Back to reading"
                 </button>
             </p>
@@ -116,6 +116,7 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
     view! {
         <Frame>
             <h1>"Grown-ups"</h1>
+            <section class="group">
             <h2>"Readers"</h2>
             {move || {
                 let all = children.get()?;
@@ -162,15 +163,20 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
                         };
                         let armed = move || deleting.get().as_deref() == Some(&for_delete);
                         view! {
-                            <p class="reader">
-                                <strong>{name}</strong>
-                                {format!(" · age {} · {} look ", child.age_band, child.look)}
-                                <button type="button" class="link" on:click=on_export>"Export"</button>
-                                " "
-                                <button type="button" class="link danger" on:click=on_delete>
-                                    {move || twice(armed(), "Delete", "Really delete? Tap again")}
-                                </button>
-                            </p>
+                            <div class="reader">
+                                <p class="reader-name">{name}</p>
+                                <p class="small">
+                                    {format!("age {} · {} look", child.age_band, child.look)}
+                                </p>
+                                <p class="reader-actions">
+                                    <button type="button" class="quiet" on:click=on_export>
+                                        "Export"
+                                    </button>
+                                    <button type="button" class="danger" on:click=on_delete>
+                                        {move || twice(armed(), "Delete", "Really delete? Tap again")}
+                                    </button>
+                                </p>
+                            </div>
                         }
                     })
                     .collect_view()
@@ -181,6 +187,8 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
                     view! { <p><a href=href download=file>"Save the export file"</a></p> }
                 })
             }}
+            </section>
+            <section class="group">
             <h2>"Add a reader"</h2>
             <p>
                 <label>"Age "
@@ -199,11 +207,14 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
                 " "
                 <button type="button" class="next" on:click=add>"Add reader"</button>
             </p>
+            </section>
+            <section class="group">
             <h2>"Your account"</h2>
             <p>
-                <button type="button" class="next" on:click=sign_out>"Sign out"</button>
-                " "
-                <button type="button" class="link danger" on:click=delete_account>
+                <button type="button" class="quiet" on:click=sign_out>"Sign out"</button>
+            </p>
+            <p>
+                <button type="button" class="danger" on:click=delete_account>
                     {move || twice(
                         deleting_account.get(),
                         "Delete my account and all readers",
@@ -211,13 +222,14 @@ pub fn Parent(route: RwSignal<Route>) -> impl IntoView {
                     )}
                 </button>
             </p>
+            </section>
             <p class="note error">{move || error.get()}</p>
             <p>
                 <button type="button" class="link" on:click=move |_| route.set(Route::Privacy)>
                     "Privacy"
                 </button>
                 " "
-                <button type="button" class="next" on:click=move |_| route.set(Route::Profiles)>
+                <button type="button" class="quiet" on:click=move |_| route.set(Route::Profiles)>
                     "Back to reading"
                 </button>
             </p>

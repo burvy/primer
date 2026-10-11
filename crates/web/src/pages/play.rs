@@ -16,6 +16,7 @@ use crate::api;
 use crate::audio;
 use crate::components::audio_controls::AudioControls;
 use crate::components::book::{ChapterOpener, Cover};
+use crate::components::buttons::{Mark, Turn};
 use crate::components::contents::Contents;
 use crate::components::equation::Equation;
 use crate::components::keypad::Keypad;
@@ -220,23 +221,42 @@ pub fn App(child: ChildDto, #[prop(into)] on_leave: Callback<()>) -> impl IntoVi
         });
     };
 
+    // The running head, like the top of a printed page: where to go, and one
+    // small mark that opens the settings (the look and the sound).
+    let settings_open = RwSignal::new(false);
+    // What the child just answered, for the verdict page (see `Practice`).
+    let worked = RwSignal::new(None::<(ProblemDto, Option<u32>)>);
     view! {
         <div class="shell" data-look=move || word(look.get())>
             <BookPage>
-                <LookSwitch look=look on_switch=on_switch />
-                <button type="button" class="grown-ups" on:click=move |_| on_leave.run(())>
-                    "Grown-ups"
-                </button>
-                <button type="button" class="grown-ups" on:click=move |_| open_contents(screen)>
-                    "Contents"
-                </button>
-                <AudioControls settings=sound on_change=on_sound />
+                <header class="running-head">
+                    <nav>
+                        <button type="button" class="quiet" on:click=move |_| open_contents(screen)>
+                            "Contents"
+                        </button>
+                        " · "
+                        <button type="button" class="quiet" on:click=move |_| on_leave.run(())>
+                            "Grown-ups"
+                        </button>
+                    </nav>
+                    <button type="button" class="quiet settings-mark" aria-label="Settings"
+                        aria-expanded=move || settings_open.get().to_string()
+                        on:click=move |_| settings_open.update(|open| *open = !*open)>
+                        "\u{22ef}"
+                    </button>
+                </header>
+                {move || settings_open.get().then(|| view! {
+                    <div class="settings">
+                        <LookSwitch look=look on_switch=on_switch />
+                        <AudioControls settings=sound on_change=on_sound />
+                    </div>
+                })}
                 // A fresh `leaf` for every screen turns the page. A lesson draws
                 // its own leaf for each beat, so it is left out here.
                 {move || {
                     let now = screen.get();
                     let turns = !matches!(&now, Screen::Page(PageDto::Lesson { .. }));
-                    view! { <div class:leaf=turns>{screen_view(now, screen, look, hero.clone())}</div> }
+                    view! { <div class:leaf=turns>{screen_view(now, screen, look, hero.clone(), worked)}</div> }
                 }}
             </BookPage>
         </div>
@@ -244,14 +264,20 @@ pub fn App(child: ChildDto, #[prop(into)] on_leave: Callback<()>) -> impl IntoVi
 }
 
 /// What one screen looks like.
-fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero: String) -> AnyView {
+fn screen_view(
+    now: Screen,
+    screen: RwSignal<Screen>,
+    look: RwSignal<Look>,
+    hero: String,
+    worked: RwSignal<Option<(ProblemDto, Option<u32>)>>,
+) -> AnyView {
     match now {
     Screen::Loading => view! { <p class="note">"Opening the book…"</p> }.into_any(),
     Screen::Failed(message) => {
         view! { <p class="note">{format!("Something went wrong: {message}")}</p> }
             .into_any()
     }
-    Screen::Feedback(reply) => view! { <Feedback reply=*reply look screen /> }.into_any(),
+    Screen::Feedback(reply) => view! { <Feedback reply=*reply look screen worked /> }.into_any(),
     Screen::Ask { body, ask, explain, feel } => {
         // One question at a time: "how" first, then "feel"; then send.
         let question = if explain { ask.explain.clone() } else { ask.feel.clone() };
@@ -272,14 +298,13 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
     }
     Screen::Rest { note, set_end, next } => view! {
         <AdaSays note look />
-        <button type="button" class="next"
-            on:click=move |_| screen.set(after_feedback(set_end.clone(), next.clone()))>
+        <Turn on_click=move |()| screen.set(after_feedback(set_end.clone(), next.clone()))>
             "Carry on ▸"
-        </button>
+        </Turn>
     }
     .into_any(),
     Screen::Question { question, notice, next } => {
-        let on_see = move |_| {
+        let on_see = move || {
             screen.set(match notice.clone() {
                 Some(notice) => Screen::Notice { notice, next: next.clone() },
                 None => show(Ok(next.clone())),
@@ -287,16 +312,15 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
         };
         view! {
             <AdaSays note=question look />
-            <button type="button" class="next" on:click=on_see>"I see it ▸"</button>
+            <Turn on_click=move |()| on_see()>"I see it ▸"</Turn>
         }
         .into_any()
     }
     Screen::Notice { notice, next } => view! {
         <AdaSays note=notice look />
-        <button type="button" class="next"
-            on:click=move |_| screen.set(show(Ok(next.clone())))>
+        <Turn on_click=move |()| screen.set(show(Ok(next.clone())))>
             "Continue ▸"
-        </button>
+        </Turn>
     }
     .into_any(),
     Screen::Cover(page) => {
@@ -324,7 +348,7 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
     }
     Screen::Page(PageDto::Practice { page_id, problem, stage, story, ask, .. }) => {
         let story = story.map(|boxed| *boxed);
-        view! { <Practice page_id problem stage story ask look screen /> }.into_any()
+        view! { <Practice page_id problem stage story ask look screen worked /> }.into_any()
     }
     Screen::Page(PageDto::Story) => {
         view! { <p>"The end of this part of the book."</p> }.into_any()
@@ -333,9 +357,7 @@ fn screen_view(now: Screen, screen: RwSignal<Screen>, look: RwSignal<Look>, hero
         <section class="end-of-book">
             <h1>"The end, so far"</h1>
             <p>"You have read all the chapters that are written. More are coming."</p>
-            <button type="button" class="next" on:click=move |_| open_contents(screen)>
-                "Contents ▸"
-            </button>
+            <Turn on_click=move |()| open_contents(screen)>"Contents ▸"</Turn>
         </section>
     }
     .into_any(),
@@ -374,8 +396,10 @@ fn Practice(
     ask: Option<Box<AskDto>>,
     look: RwSignal<Look>,
     screen: RwSignal<Screen>,
+    worked: RwSignal<Option<(ProblemDto, Option<u32>)>>,
 ) -> impl IntoView {
     let input = RwSignal::new(Input::Empty);
+    let for_verdict = problem.clone();
     let right_answer = hidden(&problem);
     let busy = RwSignal::new(false);
     let started = js_sys::Date::now();
@@ -395,6 +419,7 @@ fn Practice(
             explanation: None,
             feeling: None,
         };
+        worked.set(Some((for_verdict.clone(), body.answer)));
         // Should Ada ask something first? The rule is the core's; the page
         // only knows whether the answer is right.
         let asked = ask.as_ref().map(|ask| {
@@ -499,7 +524,37 @@ fn Practice(
 /// A right answer chimes and Ada praises it; a wrong one gets Ada's hint. If
 /// the book has no line for it, a short plain sentence stands in.
 #[component]
-fn Feedback(reply: AnswerResponse, look: RwSignal<Look>, screen: RwSignal<Screen>) -> impl IntoView {
+fn Feedback(
+    reply: AnswerResponse,
+    look: RwSignal<Look>,
+    screen: RwSignal<Screen>,
+    worked: RwSignal<Option<(ProblemDto, Option<u32>)>>,
+) -> impl IntoView {
+    let correct = reply.correct;
+    // The verdict: the equation with the answer written in, and a tick or a
+    // cross beside it. A wrong answer is followed by the right equation. With
+    // "I don't know" there is nothing to mark, so only the right equation.
+    let verdict = worked.get_untracked().map(|(problem, given)| {
+        let right = hidden(&problem).to_string();
+        let written = given.map_or_else(|| right.clone(), |n| n.to_string());
+        let fix = (given.is_some() && !correct).then(|| {
+            let (problem, right) = (problem.clone(), right.clone());
+            view! {
+                <div class="verdict-fix">
+                    <Equation problem typed=Signal::derive(move || right.clone()) />
+                </div>
+            }
+        });
+        view! {
+            <div class="verdict">
+                <div class="verdict-line">
+                    <Equation problem typed=Signal::derive(move || written.clone()) />
+                    {given.map(|_| view! { <Mark right=correct /> })}
+                </div>
+                {fix}
+            </div>
+        }
+    });
     if reply.correct {
         audio::sound("chime");
     }
@@ -516,19 +571,18 @@ fn Feedback(reply: AnswerResponse, look: RwSignal<Look>, screen: RwSignal<Screen
     };
     let (set_end, next, rest) = (reply.set_end, reply.next, reply.rest);
     // A child who said they were stuck or tired gets a rest page first.
-    let on_continue = move |_| {
+    let on_continue = move || {
         screen.set(match rest.clone() {
             Some(note) => Screen::Rest { note, set_end: set_end.clone(), next: next.clone() },
             None => after_feedback(set_end.clone(), next.clone()),
         })
     };
     view! {
+        {verdict}
         {match said {
             Some(note) => view! { <AdaSays note look /> }.into_any(),
             None => view! { <p class="note">{stub}</p> }.into_any(),
         }}
-        <button type="button" class="next" on:click=on_continue>
-            "Continue ▸"
-        </button>
+        <Turn on_click=move |()| on_continue()>"Continue ▸"</Turn>
     }
 }

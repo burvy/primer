@@ -6,6 +6,8 @@ use primer_api::OpenerDto;
 use crate::art;
 use crate::audio;
 
+use super::buttons::Turn;
+
 /// The cover: shown once, before the first lesson.
 ///
 /// If `assets/cover.svg` exists, it is the cover: the hero's name is written
@@ -38,10 +40,10 @@ pub fn Cover(hero: String, #[prop(into)] on_open: Callback<()>) -> impl IntoView
                 }
                 .into_any(),
             }}
-            <button type="button" class="next" on:click=move |_| {
+            <Turn on_click=move |()| {
                 audio::sound("page-turn");
                 on_open.run(());
-            }>"Open the book ▸"</button>
+            }>"Open the book ▸"</Turn>
         </section>
     }
 }
@@ -56,10 +58,10 @@ pub fn ChapterOpener(opener: OpenerDto, #[prop(into)] on_begin: Callback<()>) ->
             <p class="chapter-number">{format!("Chapter {}", opener.number)}</p>
             <h1>{opener.title}</h1>
             {move || art.get().map(|svg| view! { <div class="opener-art" inner_html=svg></div> })}
-            <button type="button" class="next" on:click=move |_| {
+            <Turn on_click=move |()| {
                 audio::sound("page-turn");
                 on_begin.run(());
-            }>"Begin ▸"</button>
+            }>"Begin ▸"</Turn>
         </section>
     }
 }

@@ -56,6 +56,10 @@ You pick the Gentle colours; tell me the hex values.
 | 11 | `divider.svg` | 300 × 40 | `divider` | Ornament between sections. |
 | 12 | `builder.svg` | 300 × 300 | `builder` | The builder from the word problems. |
 | 13 | `proved-exceptional.svg` | 200 × 200 | `seal` | Seal for the Exceptional track. |
+| 14 | `marks.svg` | 100 × 100 | `tick` (ink), `cross` (`mark` red) | Beside a checked answer. Pencil strokes: the tick in one motion, the cross in two. A code-drawn placeholder is in `assets/lessons/marks.svg`. |
+| 15 | `deckle.svg` | 150 × 150 | one path | The torn page edge of the Gentle look (`assets/textures/deckle.svg`, a code-drawn placeholder). Keep the torn outline inside the outer 30 units, filled with `paper`, and the same shape at both ends of each side so the repeats join. Used as `border-image` (see `docs/FRONTEND.md`). |
+
+Item 5 (`highlights.svg`) also draws the underline under every "Next" / "Continue" button (layer `underline`).
 
 Items 1–7 are needed for a demo of chapters 1 and 2; 8–9 make it feel like a
 book; 10–13 can wait.

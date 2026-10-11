@@ -1,0 +1,9 @@
+<!-- PLACEHOLDER torn paper edge, drawn by code. Used as the page border of the
+     Gentle look (`border-image` in crates/web/style.css): the 30-unit band
+     round the edge is cut into corners and sides, and the sides repeat along
+     the page. Redraw it in Inkscape at 150 x 150: keep the torn outline inside
+     the outer 30 units, and the same shape at both ends of each side so the
+     repeats join. Colour: the Parchment `paper`. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">
+  <path d="M 4.9 4.9 L 30.0 4.9 L 36.0 3.1 L 42.0 8.3 L 48.0 2.3 L 54.0 7.1 L 60.0 5.3 L 66.0 2.1 L 72.0 6.8 L 78.0 1.9 L 84.0 6.1 L 90.0 2.2 L 96.0 2.5 L 102.0 6.0 L 108.0 10.2 L 114.0 2.8 L 120.0 4.9 L 145.1 4.9 L 142.5 30.0 L 143.0 36.0 L 139.3 42.0 L 140.8 48.0 L 145.5 54.0 L 138.2 60.0 L 147.3 66.0 L 144.1 72.0 L 140.6 78.0 L 146.9 84.0 L 143.4 90.0 L 148.1 96.0 L 141.5 102.0 L 140.5 108.0 L 142.5 114.0 L 142.5 120.0 L 146.2 146.2 L 120.0 146.2 L 114.0 141.9 L 108.0 138.5 L 102.0 142.4 L 96.0 144.3 L 90.0 138.2 L 84.0 148.0 L 78.0 139.5 L 72.0 145.5 L 66.0 147.0 L 60.0 147.3 L 54.0 145.3 L 48.0 139.9 L 42.0 146.6 L 36.0 142.4 L 30.0 146.2 L 8.2 141.8 L 8.2 120.0 L 5.4 114.0 L 7.3 108.0 L 2.2 102.0 L 2.1 96.0 L 3.7 90.0 L 8.6 84.0 L 6.0 78.0 L 4.8 72.0 L 7.6 66.0 L 6.3 60.0 L 4.6 54.0 L 9.8 48.0 L 8.8 42.0 L 4.1 36.0 L 8.2 30.0 Z" fill="#f4e9d0"/>
+</svg>

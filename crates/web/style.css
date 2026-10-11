@@ -45,6 +45,7 @@
   --texture-ada: url("../../assets/ada/ada-silhouette.svg");
   --texture-ornament: url("../../assets/ornaments/divider.svg");
   --texture-seal: url("../../assets/seals/proved-exceptional.svg");
+  --texture-deckle: url("../../assets/textures/deckle.svg");
 
   --turn-ms: 350ms;
 }
@@ -110,6 +111,27 @@
   border: 2px solid var(--ink);
   border-radius: var(--corner);
   box-shadow: var(--page-shadow);
+}
+
+/* The page edge. Gentle: a torn (deckle) edge from a drawing, with a soft
+ * shadow that follows the torn line. `border-image` cuts the drawing into
+ * corners and sides (slice 30, drawn 10px wide); the paper colour inside is
+ * the background, which stops at the padding so the torn edge shows. */
+[data-look="gentle"] .book {
+  border: 10px solid transparent;
+  border-image: var(--texture-deckle) 30 / 10px round;
+  border-radius: 0;
+  background-clip: padding-box;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--ink) 35%, transparent));
+}
+/* Exceptional: Byrne's thin border, with a second thin rule just inside. */
+[data-look="exceptional"] .book {
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  outline: 1px solid var(--ink);
+  outline-offset: -7px;
 }
 
 /* Lesson headings read like book matter, not app chrome. */

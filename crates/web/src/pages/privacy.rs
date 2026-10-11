@@ -29,7 +29,7 @@ pub fn Privacy(route: RwSignal<Route>) -> impl IntoView {
                 <li>"A grown-up can export a child's data, delete a child, or delete the whole account at any time. Deleting removes everything, answers included."</li>
             </ul>
             <p>
-                <button type="button" class="next" on:click=back>"Back"</button>
+                <button type="button" class="quiet" on:click=back>"Back"</button>
             </p>
         </Frame>
     }

@@ -247,3 +247,48 @@ component that did it. Read the diff next to this list.
    `style.css`, `.shell` gets `padding-top: clamp(1rem, 8vh, 4rem)`: some air,
    that grows with the window but stays small. (True vertical centring would
    make the page jump between beats of different height, so it is not used.)
+
+## How batch 2 was done
+
+The human's six decisions (`docs/ui-audit/README.md`, "Decisions") and what
+made each real.
+
+1. **Three kinds of button.** `components/buttons.rs` has `Turn`, a button whose
+   child is the hand-drawn underline (the same `Stroke` component the equation
+   highlights use, layer `underline` of `assets/lessons/highlights.svg`); in
+   `play.css`, `.turn` removes the box, `.go`/`.next` became the **ink stamp**
+   (square, double rule via `outline`, `rotate(-1.5deg)`), `.quiet`/`.link` are
+   small dotted-underline words, and `.danger` is a red frame whose uneven
+   `border-radius` (four different values) makes it look hand-drawn.
+2. **Running head.** In `pages/play.rs` the old stack of buttons became a
+   `<header class="running-head">` (flex, `justify-content: space-between`) and a
+   `settings_open` signal: the `{move || settings_open.get().then(...)}` block
+   shows or hides the look and sound switches.
+3. **Page edge.** `style.css`: `[data-look="gentle"] .book` uses
+   `border-image: var(--texture-deckle) 30 / 10px round`. `border-image` cuts a
+   picture into corners and sides (slice 30 of 150) and repeats the sides along
+   the page. `background-clip: padding-box` stops the paper under the edge, and
+   `filter: drop-shadow` (not `box-shadow`) lets the shadow follow the torn line.
+   Exceptional: a 1px border plus an inner `outline` with a negative offset.
+4. **Ada beside her words in lessons.** `components/lesson.rs`: the text leaf
+   became `<div class="leaf says">` with Ada inside, reusing the flex row
+   `.says` of the practice pages; a smaller Ada on phones is a `max-width` media
+   query in `play.css`.
+5. **Tick or cross.** `pages/play.rs` remembers the answered problem in a
+   `worked` signal; the `Feedback` component shows the equation with the answer
+   in the box plus `Mark` (`buttons.rs`), which loads `assets/lessons/marks.svg`
+   and hides the other layer with CSS (`svg.verdict-mark.show-tick #cross`).
+   No file: a typed ✓ or ✗ stands in.
+6. **Contents.** `components/contents.rs`: the badge function now takes "were all
+   steps read?"; each row is a CSS grid (`.chapter li`: tick column, label,
+   progress) so every row lines up; "you are here" is a rule down the margin
+   (`.chapter-current`) instead of red text.
+7. **Grown-up page.** `pages/parent.rs`: each part is a `<section class="group">`
+   under a rule; each reader is a small card (`.reader`) with its actions in a
+   flex row.
+8. **Number line.** `components/pictures.rs`: the numerals scale with the
+   width of the line (a long line is shrunk to fit, which shrank its numbers),
+   and a line longer than 10 labels every second number.
+
+New placeholder drawings, made by code and meant to be redrawn: `highlights.svg`,
+`marks.svg`, `textures/deckle.svg` (listed in `docs/ART_GUIDE.md`).

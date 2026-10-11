@@ -15,8 +15,7 @@ body {
 }
 .look-switch,
 .go,
-.next,
-.dont-know {
+.next {
   font-family: var(--body-font);
   font-size: 1rem;
   color: var(--ink);
@@ -25,26 +24,71 @@ body {
   border-radius: var(--corner);
   padding: 0.5rem 1rem;
 }
+/* The main action (Check, and the form buttons) is an ink stamp: a square
+ * label in a double rule, a little crooked, as if pressed by hand. */
 .go,
 .next {
   display: block;
   margin: var(--gap) auto 0;
-  background: var(--warm);
+  padding: 0.45rem 1.5rem;
+  background: none;
+  color: var(--ink);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  outline: 1px solid var(--ink);
+  outline-offset: 3px;
+  transform: rotate(-1.5deg);
+  cursor: pointer;
+}
+.go:hover:not(:disabled),
+.next:hover {
+  background: var(--ink);
   color: var(--paper);
-  border-color: var(--ink);
 }
 .go:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
+  cursor: default;
 }
-.dont-know {
+
+/* "Go on" (Next, Continue, Begin...) is a word with a hand-drawn underline.
+ * The underline is the `underline` stroke of highlights.svg (see
+ * components/buttons.rs); with no file, a plain rule stands in. */
+.turn {
+  position: relative;
   display: block;
-  margin: 0.5rem auto 0;
+  margin: var(--gap) auto 0;
+  padding: 0.3rem 0.6rem 0.7rem;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 1.2rem;
+  color: var(--ink);
+  cursor: pointer;
 }
-/* In the keypad it is the last key: same size as the others, smaller words. */
-.keypad .dont-know {
-  margin: 0;
-  padding: 0.25rem;
-  font-size: 0.85rem;
+.turn:not(:has(.mark-stroke)) {
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--ink);
+}
+.turn .mark-stroke {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.turn .mark-stroke path {
+  stroke: var(--ink);
+}
+.turn:hover .mark-stroke path {
+  stroke: var(--mark);
+}
+.turn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* In the keypad "I don't know" is the last key's slot, as plain words. */
+.keypad .quiet {
   line-height: 1.15;
 }
 .maths {
@@ -627,27 +671,39 @@ body.speaking .ada #mouth-closed {
 .choice {
   min-width: 8rem;
 }
-/* A small text-style button: Back, Privacy, Export, Grown-ups. */
-.link {
+/* Quiet actions (Skip, Back, Export, I don't know, Contents...) are plain
+ * small words with a dotted underline. */
+.link,
+.quiet {
   background: none;
   border: none;
   padding: 0.25rem 0.5rem;
   font: inherit;
+  font-size: 0.9rem;
   color: var(--ink-soft);
-  text-decoration: underline;
+  text-decoration: underline dotted 1px;
+  text-underline-offset: 0.25em;
   cursor: pointer;
 }
-.link.danger {
-  color: var(--mark);
+.link:hover,
+.quiet:hover {
+  color: var(--ink);
+  text-decoration-style: solid;
 }
-.grown-ups {
-  float: right;
+/* Dangerous actions (Delete) sit in a red frame, drawn a little unevenly. */
+.danger {
+  padding: 0.3rem 0.9rem;
   background: none;
-  border: none;
   font: inherit;
-  color: var(--ink-soft);
-  text-decoration: underline;
+  font-size: 0.9rem;
+  color: var(--mark);
+  border: 2px solid var(--mark);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   cursor: pointer;
+}
+.danger:hover {
+  background: var(--mark);
+  color: var(--paper);
 }
 /* An empty message takes no room (the old min-height left a gap above the
  * links under it). */
@@ -706,8 +762,37 @@ body.speaking .ada #mouth-closed {
   font-family: var(--maths-font);
   font-size: 1.6rem;
 }
+/* Each part of the grown-up page is a group under a rule; each reader a card. */
+.group {
+  margin-top: var(--gap);
+  padding-top: var(--gap);
+  border-top: 1px solid var(--ink-soft);
+}
+.group h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .reader {
-  margin: calc(var(--gap) / 2) 0;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ink-soft);
+  border-radius: var(--corner);
+}
+.reader p {
+  margin: 0.1rem 0;
+}
+.reader-name {
+  font-family: var(--heading-font);
+  font-size: 1.3rem;
+}
+.reader-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.4rem;
 }
 
 /* ---- The table of contents and the end of the book ---- */
@@ -734,18 +819,38 @@ body.speaking .ada #mouth-closed {
   padding: 0;
 }
 .chapter li {
-  padding: 0.15rem 0;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.2rem 0;
 }
-.chapter-current h2 {
-  color: var(--mark);
+.chapter li .quiet {
+  padding: 0;
+  font-size: inherit;
+  color: var(--ink);
+  text-align: left;
+  justify-self: start;
+}
+.chapter .tick {
+  color: var(--ink);
 }
 .badge,
 .progress {
   color: var(--ink-soft);
   font-size: 0.9rem;
 }
-.item-new .link {
-  font-weight: bold;
+.badge {
+  margin: 0 0 0.5rem;
+  font-style: italic;
+}
+.badge:empty {
+  display: none;
+}
+/* "You are here": a rule down the margin, not a colour. */
+.chapter-current {
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--ink);
 }
 
 /* ---- Ada asks how the child worked it out, or how they feel ---- */
@@ -788,7 +893,93 @@ body.speaking .ada #mouth-closed {
   align-items: baseline;
   gap: var(--gap);
 }
-.choice-actions .go,
-.choice-actions .dont-know {
-  margin: var(--gap) 0 0;
+
+/* ---- Batch 2: running head, Ada beside her words, the verdict ---- */
+
+/* The top of the page, like a printed running head: where to go on the left,
+ * one small mark for the settings on the right. */
+.running-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--gap);
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--ink-soft);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+.running-head .quiet {
+  text-decoration: none;
+  font-size: 1rem;
+}
+.settings-mark {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+/* The look and sound switches, opened by the mark. */
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: var(--gap);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dotted var(--ink-soft);
+}
+.settings .audio-controls {
+  margin: 0;
+}
+
+/* Ada is a small portrait beside her words on a phone. */
+@media (max-width: 47.99rem) {
+  .says .ada {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+  .said {
+    font-size: 1.15rem;
+  }
+}
+
+/* The verdict: the equation with the answer written in, and a tick or a
+ * cross. A wrong answer is followed by the right equation, smaller. */
+.verdict {
+  margin: var(--gap) 0;
+  text-align: center;
+}
+.verdict-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.verdict-line .equation {
+  margin: 0;
+}
+.verdict-mark {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.verdict-mark.glyph {
+  font-size: 2.5rem;
+  line-height: 1;
+  text-align: center;
+}
+.verdict-mark.glyph.show-tick {
+  color: var(--ink);
+}
+.verdict-mark.glyph.show-cross {
+  color: var(--mark);
+}
+svg.verdict-mark.show-tick #cross,
+svg.verdict-mark.show-cross #tick {
+  display: none;
+}
+.verdict-fix {
+  color: var(--ink-soft);
+}
+.verdict-fix .equation {
+  margin: 0.25rem 0 0;
+  font-size: calc(var(--equation-size) * 0.7);
 }
