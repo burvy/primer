@@ -75,9 +75,8 @@ pub fn machine_lines(fed: &[(u32, Option<u32>)], joined: bool) -> Vec<String> {
         .collect()
 }
 
-/// The picture for one beat. `match` on the `show` word picks the drawing;
-/// the beat's small settings (`count`, `at`, ...) are handed to it.
-/// `running` is the machine that moves in this beat (see [`machine_progress`]).
+/// How long a lesson's number line is and which way it hops: `(max, forward)`.
+/// Going back from `at` only needs the line up to `at`.
 fn number_line_settings(beat: &BeatDto) -> (u32, bool) {
     let (at, hop) = (beat.at.unwrap_or(0), beat.hop.unwrap_or(0));
     let back = beat.back.unwrap_or(false);
@@ -85,6 +84,9 @@ fn number_line_settings(beat: &BeatDto) -> (u32, bool) {
     (max, !back)
 }
 
+/// The picture for one beat. `match` on the `show` word picks the drawing;
+/// the beat's small settings (`count`, `at`, ...) are handed to it.
+/// `running` is the machine that moves in this beat (see [`machine_progress`]).
 #[component]
 fn Picture(beat: BeatDto, running: Option<usize>) -> impl IntoView {
     match beat.show.as_str() {
@@ -95,7 +97,7 @@ fn Picture(beat: BeatDto, running: Option<usize>) -> impl IntoView {
         "number-line" => {
             let hop = beat.hop.unwrap_or(0);
             let (max, forward) = number_line_settings(&beat);
-            view! { <NumberLine max=max from=beat.at hop=hop forward=forward /> }
+            view! { <NumberLine max=max from=Some(beat.at.unwrap_or(0)) hop=hop forward=forward /> }
                 .into_any()
         }
         "machine" => view! {
