@@ -1,0 +1,158 @@
+# Chapter 4: Make ten (bonds). Every problem is a + box = 10.
+# Words: number bond (two numbers making ten), compensation (move one, give back).
+
+skill = "make-ten"
+title = "Making Ten"
+
+[[lesson]]
+id = "ch4-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "3 + □ = 10"
+
+[[lesson.step.beat]]
+text = "Two pouches must fill one ten frame."
+show = "pouches"
+left = 3
+right = 7
+
+[[lesson.step.beat]]
+text = "One pouch holds 3 coins. The frame needs 10."
+show = "pouches"
+left = 3
+right = 7
+join = true
+total = 10
+
+[[lesson.step]]
+stage = "number-line"
+example = "3 + □ = 10"
+
+[[lesson.step.beat]]
+text = "Stand on 3. You must reach 10."
+show = "number-line"
+at = 3
+
+[[lesson.step.beat]]
+text = "Hop forward: 4, 5, 6, 7, 8, 9, 10. Seven hops."
+show = "number-line"
+at = 3
+hop = 7
+
+[[lesson.step]]
+stage = "abstract"
+example = "3 + □ = 10"
+
+[[lesson.step.beat]]
+text = 'We write $3 + □ = 10$. Two numbers making ten are a number bond.'
+formal = '$3 + 7 = 10$ is a number bond: two parts of ten.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'Move one coin over: $4 + 6 = 10$. One up, one down. That is compensation.'
+formal = 'Compensation: $3 + 7 = 4 + 6 = 10$. Move one, the whole holds.'
+show = "equation"
+
+# Bond walk: 1 to 9, each pair making ten.
+[[problem_set]]
+id = "ch4-bond-walk"
+stage = "pictorial"
+look = "both"
+pattern = "bond-walk"
+problems = ["1 + □ = 10", "2 + □ = 10", "3 + □ = 10", "4 + □ = 10", "5 + □ = 10"]
+question = "Look at each hiding number. What do you notice?"
+notice = "Did you see? As one side grows, the other shrinks. Ten holds still."
+formal_notice = "Bonds of ten: $1 + 9$ through $5 + 5$. One up, one down."
+
+# Second half of the walk, number line stage.
+[[problem_set]]
+id = "ch4-bond-walk-far"
+stage = "number-line"
+look = "both"
+pattern = "bond-walk"
+problems = ["6 + □ = 10", "7 + □ = 10", "8 + □ = 10", "9 + □ = 10"]
+question = "How many hops does each sum need?"
+notice = "Did you see? Fewer hops each time. The bonds mirror each other."
+formal_notice = "The walk mirrors: $6 + 4$ through $9 + 1$."
+
+# Compensation pairs: move one coin and watch the bond hold.
+[[problem_set]]
+id = "ch4-compensation"
+stage = "abstract"
+look = "both"
+pattern = "bond-walk"
+problems = ["3 + □ = 10", "4 + □ = 10", "5 + □ = 10", "6 + □ = 10"]
+question = "Move one from the hiding pile to the seen pile. What happens?"
+notice = "Did you see? Move one over and the bond still makes ten. That is compensation."
+formal_notice = "Compensation keeps ten: move one, the sum holds at $10$."
+
+[[word_problem]]
+id = "ch4-frame"
+stage = "pictorial"
+look = "both"
+text = "A ten frame holds {a} counters. How many more fill it?"
+formal = "A ten frame holds {a} counters. How many complete $10$?"
+a = 3
+b = 7
+
+[[word_problem]]
+id = "ch4-gate"
+stage = "number-line"
+look = "both"
+text = "The builder stands on step {a}. He must reach step 10. How many steps more?"
+formal = "From step {a} to step 10. Find $x$ in ${a} + x = 10$."
+a = 6
+b = 4
+
+[[hint]]
+id = "ch4-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Count the empty slots in the frame. Touch each one."
+formal = "The unknown is the empty slots: $10 - a$."
+
+[[hint]]
+id = "ch4-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Count on from what you see to 10."
+formal = "Count on from $a$ to $10$."
+
+[[hint]]
+id = "ch4-hint-off-by-one-pouches"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Touch each filled slot. Then touch each empty one."
+formal = "Count filled, then empty. Ten is the goal."
+
+[[hint]]
+id = "ch4-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "The whole is fixed: ten. Never more, never less."
+formal = "The whole is fixed at $10$."
+
+[[hint]]
+id = "ch4-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Try its mirror. What pairs with it to make ten?"
+formal = "Use the bond you know. Mirror it."
+
+[[praise]]
+id = "ch4-praise-1"
+text = "Ten, exactly. A true bond!"
+formal = "A true number bond."
+
+[[praise]]
+id = "ch4-praise-2"
+text = "You walked the bonds in order."
+formal = "Bond walk complete."
+when = "set-end"
+
+[[praise]]
+id = "ch4-praise-3"
+text = "One moved, ten held. Compensation!"
+when = "streak"

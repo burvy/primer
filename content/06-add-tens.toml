@@ -1,0 +1,159 @@
+# Chapter 6: Add within 20, no carrying. Tens stay full, ones join freely.
+# Words: ones, tens, place value (where a digit sits).
+
+skill = "add-within-20-no-carry"
+title = "Tens and Ones"
+
+[[lesson]]
+id = "ch6-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "13 + 4"
+
+[[lesson.step.beat]]
+text = "One full frame and 3 loose counters. That is 13."
+show = "counters"
+count = 13
+
+[[lesson.step.beat]]
+text = "Add 4 loose counters. The full frame stays full."
+show = "counters"
+count = 17
+
+[[lesson.step]]
+stage = "number-line"
+example = "13 + 4"
+
+[[lesson.step.beat]]
+text = "Stand on 13. Hop 4 small steps."
+show = "number-line"
+at = 13
+
+[[lesson.step.beat]]
+text = "Land on 17: 14, 15, 16, 17. No ten crossed."
+show = "number-line"
+at = 13
+hop = 4
+
+[[lesson.step]]
+stage = "abstract"
+example = "13 + 4"
+
+[[lesson.step.beat]]
+text = 'We write $13 + 4 = 17$. Loose counters are ones; a full frame is ten.'
+formal = '$13 + 4 = 17$: ones join ones.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'In 17 the 1 means one ten. That is its place value.'
+formal = 'Place value: in $17$, the 1 counts tens.'
+show = "equation"
+
+# Parallel runs: small sum, then the same sum with a ten.
+[[problem_set]]
+id = "ch6-parallel-small"
+stage = "pictorial"
+look = "both"
+pattern = "parallel"
+problems = ["13 + 4", "14 + 3", "12 + 5", "15 + 4"]
+question = "Think of the small twin: $3 + 4$ beside $13 + 4$. What stayed the same?"
+notice = "Did you see? The ten sits still. Only the ones join."
+formal_notice = "Parallel sums: $3 + 4 = 7$ and $13 + 4 = 17$. The ten is untouched."
+
+[[problem_set]]
+id = "ch6-parallel-line"
+stage = "number-line"
+look = "both"
+pattern = "parallel"
+problems = ["14 + 3", "15 + 2", "16 + 3", "17 + 2"]
+question = "Hop each sum. How are the hops alike?"
+notice = "Did you see? Only the ones hop. The ten rides along."
+formal_notice = "Same ones, shifted by ten: $4 + 3$ beside $14 + 3$."
+
+[[problem_set]]
+id = "ch6-parallel-bare"
+stage = "abstract"
+look = "both"
+pattern = "parallel"
+problems = ["16 + 2", "11 + 6", "12 + 7", "13 + 6"]
+question = "Cover the tens digit. What do you see?"
+notice = "Did you see? Cover the 1 and the ones sums stay small. Place value at work."
+formal_notice = "Ones match, tens hold: $6 + 2 = 8$ and $16 + 2 = 18$."
+
+[[word_problem]]
+id = "ch6-frames"
+stage = "pictorial"
+look = "both"
+text = "The builder has {a} coins. A helper brings {b} more. How many in all?"
+formal = "The builder has {a} coins and receives {b} more. Find ${a} + {b}$."
+a = 13
+b = 4
+
+[[word_problem]]
+id = "ch6-stairs"
+stage = "number-line"
+look = "both"
+text = "The builder climbs to step 12, then {b} more steps. Where does he stand?"
+formal = "From step {a}, climb {b} more. Find ${a} + {b}$."
+a = 12
+b = 5
+
+[[hint]]
+id = "ch6-hint-off-by-one-counters"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Count the loose counters. Leave the full frame alone."
+formal = "Count ones only. The ten frame stays."
+
+[[hint]]
+id = "ch6-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "This page only adds. Look for the plus."
+formal = "The sign is $+$: the sum grows."
+
+[[hint]]
+id = "ch6-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand on the big teen number. Hop the ones."
+formal = "Start on the teen. Hop only the ones count."
+
+[[hint]]
+id = "ch6-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Add the ones first. Then put the ten back."
+formal = "Add ones to ones. The ten carries over untouched."
+
+[[hint]]
+id = "ch6-hint-carry-or-borrow"
+stage = "abstract"
+mistake = "carry-or-borrow"
+text = "No carrying here. The ones fit in one frame."
+formal = "Ones stay under ten here. No regrouping needed."
+
+[[hint]]
+id = "ch6-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Hide the ten. Solve the small sum. Then add ten."
+formal = "Solve the ones sum first, then restore the ten."
+
+[[praise]]
+id = "ch6-praise-1"
+text = "The ten rode along. Well held!"
+formal = "Ten preserved, ones joined."
+
+[[praise]]
+id = "ch6-praise-2"
+text = "Small sum, big sum: both yours."
+formal = "Parallel pair solved."
+when = "set-end"
+
+[[praise]]
+id = "ch6-praise-3"
+text = "Ones to ones, like a builder."
+when = "streak"

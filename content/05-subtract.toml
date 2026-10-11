@@ -1,0 +1,160 @@
+# Chapter 5: Subtract within 10. Taking away, never below zero.
+# Words: difference (the answer), predecessor (the number before), inverse (undo).
+
+skill = "subtract-within-10"
+title = "Taking Away"
+
+[[lesson]]
+id = "ch5-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "7 - 3"
+
+[[lesson.step.beat]]
+text = "A pouch holds 7 coins. The builder spends 3."
+show = "pouches"
+left = 7
+right = 3
+
+[[lesson.step.beat]]
+text = "4 coins stay. Taking away is called subtracting."
+show = "pouches"
+left = 4
+right = 3
+
+[[lesson.step]]
+stage = "number-line"
+example = "7 - 3"
+
+[[lesson.step.beat]]
+text = "Stand on 7. Hop back three steps."
+show = "number-line"
+at = 7
+
+[[lesson.step.beat]]
+text = "Land on 4: 6, 5, 4. Three hops back."
+show = "number-line"
+at = 4
+
+[[lesson.step]]
+stage = "abstract"
+example = "7 - 3"
+
+[[lesson.step.beat]]
+text = 'We write $7 - 3 = 4$. The answer is the difference.'
+formal = '$7 - 3 = 4$: 4 is the difference.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = "Hop back one step. That is the predecessor."
+formal = "The predecessor of 7 is 6."
+show = "equation"
+
+[[lesson.step.beat]]
+text = "Adding and subtracting undo each other. They are inverse."
+formal = "Addition and subtraction are inverse: $7 - 3 + 3 = 7$."
+show = "equation"
+
+# Predecessor walk: answers fall by one each time.
+[[problem_set]]
+id = "ch5-predecessor-walk"
+stage = "pictorial"
+look = "both"
+pattern = "predecessor"
+problems = ["7 - 1", "7 - 2", "7 - 3", "7 - 4"]
+question = "Look at the answers. What do you notice?"
+notice = "Did you see? Each answer is the number before the last. Step back, step back."
+formal_notice = "Predecessors in a row: $6, 5, 4, 3$. Each is one less."
+
+# Undo pairs: add, then take back. The start returns.
+[[problem_set]]
+id = "ch5-undo-pairs"
+stage = "number-line"
+look = "both"
+pattern = "undo"
+problems = ["7 - 4", "7 - 5", "6 - 2", "6 - 3"]
+question = "What does each take-away undo?"
+notice = "Did you see? Subtracting undoes adding. Back where you started."
+formal_notice = "Inverse pairs: $7 - 4$ undoes $3 + 4$; $6 - 2$ undoes $4 + 2$."
+
+# Mixed take-aways at the abstract stage.
+[[problem_set]]
+id = "ch5-take-away"
+stage = "abstract"
+look = "both"
+pattern = "predecessor"
+problems = ["9 - 2", "8 - 3", "6 - 1", "10 - 4"]
+question = "Hop back on the line in your head. Where do you land?"
+notice = "Did you see? Hopping back is the mirror of hopping on."
+formal_notice = "Each difference is found by stepping back: $a - b$."
+
+[[word_problem]]
+id = "ch5-coins"
+stage = "pictorial"
+look = "both"
+text = "A pouch holds {a} coins. The builder spends {b}. How many stay?"
+formal = "A pouch holds {a} coins. Spend {b}. Find ${a} - {b}$."
+a = 7
+b = 3
+
+[[word_problem]]
+id = "ch5-tower"
+stage = "number-line"
+look = "both"
+text = "The tower has {a} steps built. The wind takes {b} down. How many stand?"
+formal = "A tower of {a} steps loses {b}. Find ${a} - {b}$."
+a = 9
+b = 2
+
+[[hint]]
+id = "ch5-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand on the big number. Hop back, count the hops."
+formal = "Start on $a$. Each hop back is one less."
+
+[[hint]]
+id = "ch5-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Say the big number. Step back one at a time."
+formal = "Step back through predecessors from $a$."
+
+[[hint]]
+id = "ch5-hint-off-by-one-pouches"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Take the spent coins out. Count what stays."
+formal = "Remove the spent coins. Count the rest."
+
+[[hint]]
+id = "ch5-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "Look at the sign. $-$ means take away."
+formal = "The sign is $-$: the answer is smaller than $a$."
+
+[[hint]]
+id = "ch5-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Picture the pouch. Take the spent coins out."
+formal = "Undo it: which number joins $b$ to make $a$?"
+
+[[praise]]
+id = "ch5-praise-1"
+text = "Clean take-away. The difference is yours."
+formal = "Correct difference."
+
+[[praise]]
+id = "ch5-praise-2"
+text = "Added, then undone. You see inverses!"
+formal = "Inverse pair solved."
+when = "set-end"
+
+[[praise]]
+id = "ch5-praise-3"
+text = "Steady steps back."
+when = "streak"

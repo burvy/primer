@@ -1,0 +1,151 @@
+# Chapter 7: Subtract within 20, no borrowing. Tens stay full, ones leave freely.
+# Word: pattern (something that repeats).
+
+skill = "subtract-within-20-no-borrow"
+title = "Taking from Tens"
+
+[[lesson]]
+id = "ch7-lesson"
+look = "both"
+
+[[lesson.step]]
+stage = "pictorial"
+example = "17 - 3"
+
+[[lesson.step.beat]]
+text = "One full frame and 7 loose counters. That is 17."
+show = "counters"
+count = 17
+
+[[lesson.step.beat]]
+text = "Take 3 loose counters away. The full frame stays full."
+show = "counters"
+count = 14
+
+[[lesson.step]]
+stage = "number-line"
+example = "17 - 3"
+
+[[lesson.step.beat]]
+text = "Stand on 17. Hop back 3 small steps."
+show = "number-line"
+at = 17
+
+[[lesson.step.beat]]
+text = "Land on 14: 16, 15, 14. No ten broken."
+show = "number-line"
+at = 14
+
+[[lesson.step]]
+stage = "abstract"
+example = "17 - 3"
+
+[[lesson.step.beat]]
+text = 'We write $17 - 3 = 14$. Take ones from ones. The ten stays.'
+formal = '$17 - 3 = 14$: 7 ones minus 3 ones is 4 ones.'
+show = "equation"
+
+[[lesson.step.beat]]
+text = 'Small and big match again. When something repeats, it is a pattern.'
+formal = 'The pattern repeats: $7 - 3 = 4$ beside $17 - 3 = 14$.'
+show = "equation"
+
+# Parallel runs: small take-away, then the teen twin.
+[[problem_set]]
+id = "ch7-parallel-small"
+stage = "pictorial"
+look = "both"
+pattern = "parallel"
+problems = ["17 - 3", "16 - 2", "18 - 5", "19 - 4"]
+question = "Think of the small twin: $7 - 3$ beside $17 - 3$. What stayed the same?"
+notice = "Did you see? The ten sits still. Only the ones leave."
+formal_notice = "Parallel take-aways: $7 - 3 = 4$ and $17 - 3 = 14$."
+
+[[problem_set]]
+id = "ch7-parallel-line"
+stage = "number-line"
+look = "both"
+pattern = "parallel"
+problems = ["18 - 5", "19 - 4", "17 - 6", "16 - 5"]
+question = "Hop each take-away back. How are they alike?"
+notice = "Did you see? Only the ones hop back. A pattern."
+formal_notice = "Same steps back, shifted by ten."
+
+[[problem_set]]
+id = "ch7-parallel-bare"
+stage = "abstract"
+look = "both"
+pattern = "parallel"
+problems = ["15 - 1", "19 - 6", "14 - 3", "18 - 7"]
+question = "Cover the tens digit. What do you see?"
+notice = "Did you see? Cover the 1 and the ones sums stay small. The pattern holds."
+formal_notice = "Ones match, tens hold: $5 - 1 = 4$ and $15 - 1 = 14$."
+
+[[word_problem]]
+id = "ch7-counters"
+stage = "pictorial"
+look = "both"
+text = "The frame holds 16 counters. The builder takes {b} away. How many stay?"
+formal = "From 16 counters take {b}. Find $16 - {b}$."
+a = 16
+b = 3
+
+[[word_problem]]
+id = "ch7-tower"
+stage = "number-line"
+look = "both"
+text = "The tower stands {a} steps tall. The wind takes {b} down. How many stand?"
+formal = "A tower of {a} steps loses {b}. Find ${a} - {b}$."
+a = 18
+b = 5
+
+[[hint]]
+id = "ch7-hint-off-by-one-counters"
+stage = "pictorial"
+mistake = "off-by-one"
+text = "Take away only the loose counters. Count them."
+formal = "Take ones away. Keep the ten frame."
+
+[[hint]]
+id = "ch7-hint-off-by-one-line"
+stage = "number-line"
+mistake = "off-by-one"
+text = "Stand on the teen number. Hop back, count hops."
+formal = "Start on the teen. Each hop back is one less."
+
+[[hint]]
+id = "ch7-hint-off-by-one"
+stage = "abstract"
+mistake = "off-by-one"
+text = "Take ones from ones. Then put the ten back."
+formal = "Subtract ones from ones. The ten stays whole."
+
+[[hint]]
+id = "ch7-hint-wrong-operation"
+stage = "abstract"
+mistake = "wrong-operation"
+text = "Look at the sign. $-$ means take away."
+formal = "The sign is $-$: the answer is smaller."
+
+[[hint]]
+id = "ch7-hint-guess"
+stage = "abstract"
+mistake = "guess"
+text = "Hide the ten. Solve the small take-away first."
+formal = "Solve the ones first, then restore the ten."
+
+[[praise]]
+id = "ch7-praise-1"
+text = "The ten held firm. Well taken!"
+formal = "Ten preserved, ones taken."
+
+[[praise]]
+id = "ch7-praise-2"
+text = "You spotted the repeating pattern."
+formal = "Pattern held across the ten."
+when = "set-end"
+
+[[praise]]
+id = "ch7-praise-3"
+text = "Steady hops back."
+when = "streak"
